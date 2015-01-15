@@ -10,12 +10,18 @@
 
 @implementation MetalView
 
-/*
-// Only override drawRect: if you perform custom drawing.
-// An empty implementation adversely affects performance during animation.
-- (void)drawRect:(CGRect)rect {
-    // Drawing code
++(Class)layerClass
+{
+    return [CAMetalLayer class];
 }
-*/
+
+-(instancetype)initWithCoder:(NSCoder *)aDecoder
+{
+    if(self = [super initWithCoder:aDecoder])
+    {
+        _metalLayer = (CAMetalLayer *)[self layer];
+    }
+    return self;
+}
 
 @end

@@ -17,6 +17,7 @@
 		2F40326F1A683BEF00DBB511 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2F40326E1A683BEF00DBB511 /* QuartzCore.framework */; };
 		2F4032711A683BF800DBB511 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2F4032701A683BF800DBB511 /* Metal.framework */; };
 		2F4032741A683FC900DBB511 /* MetalView.m in Sources */ = {isa = PBXBuildFile; fileRef = 2F4032731A683FC900DBB511 /* MetalView.m */; };
+		994202D31A686EC6003D80F5 /* Renderer.m in Sources */ = {isa = PBXBuildFile; fileRef = 994202D21A686EC6003D80F5 /* Renderer.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -47,6 +48,8 @@
 		2F4032701A683BF800DBB511 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
 		2F4032721A683FC900DBB511 /* MetalView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MetalView.h; sourceTree = "<group>"; };
 		2F4032731A683FC900DBB511 /* MetalView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MetalView.m; sourceTree = "<group>"; };
+		994202D11A686EC6003D80F5 /* Renderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Renderer.h; sourceTree = "<group>"; };
+		994202D21A686EC6003D80F5 /* Renderer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Renderer.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -102,6 +105,8 @@
 				2F4032481A683B9600DBB511 /* Supporting Files */,
 				2F4032721A683FC900DBB511 /* MetalView.h */,
 				2F4032731A683FC900DBB511 /* MetalView.m */,
+				994202D11A686EC6003D80F5 /* Renderer.h */,
+				994202D21A686EC6003D80F5 /* Renderer.m */,
 			);
 			path = ComputeMetal;
 			sourceTree = "<group>";
@@ -236,6 +241,7 @@
 				2F4032741A683FC900DBB511 /* MetalView.m in Sources */,
 				2F4032511A683B9600DBB511 /* ViewController.m in Sources */,
 				2F40324E1A683B9600DBB511 /* AppDelegate.m in Sources */,
+				994202D31A686EC6003D80F5 /* Renderer.m in Sources */,
 				2F40324B1A683B9600DBB511 /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -429,6 +435,7 @@
 				2F40326A1A683B9600DBB511 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		2F40326B1A683B9600DBB511 /* Build configuration list for PBXNativeTarget "ComputeMetalTests" */ = {
 			isa = XCConfigurationList;
@@ -437,6 +444,7 @@
 				2F40326D1A683B9600DBB511 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
