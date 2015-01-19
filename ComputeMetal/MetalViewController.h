@@ -8,7 +8,9 @@
 
 #import <UIKit/UIKit.h>
 
-@interface ViewController : UIViewController
+@protocol MetalViewControllerDelegate;
+
+@interface MetalViewController : UIViewController
 
 
 @end

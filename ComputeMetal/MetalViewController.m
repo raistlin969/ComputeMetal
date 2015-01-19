@@ -6,13 +6,13 @@
 //  Copyright (c) 2015 Michael Davidson. All rights reserved.
 //
 
-#import "ViewController.h"
+#import "MetalViewController.h"
 
-@interface ViewController ()
+@interface MetalViewController ()
 
 @end
 
-@implementation ViewController
+@implementation MetalViewController
 
 - (void)viewDidLoad {
     [super viewDidLoad];
