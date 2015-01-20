@@ -7,6 +7,10 @@
 //
 
 #import "Renderer.h"
+#import <QuartzCore/CAMetalLayer.h>
+#import <Metal/Metal.h>
+#import <simd/simd.h>
+
 
 @implementation Renderer
 
