@@ -17,7 +17,9 @@
 		2F4032711A683BF800DBB511 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2F4032701A683BF800DBB511 /* Metal.framework */; };
 		2F4032741A683FC900DBB511 /* MetalView.m in Sources */ = {isa = PBXBuildFile; fileRef = 2F4032731A683FC900DBB511 /* MetalView.m */; };
 		2F4032771A6C8C4300DBB511 /* Quad.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2F4032761A6C8C4300DBB511 /* Quad.mm */; };
-		994202D31A686EC6003D80F5 /* Renderer.m in Sources */ = {isa = PBXBuildFile; fileRef = 994202D21A686EC6003D80F5 /* Renderer.m */; };
+		994202D31A686EC6003D80F5 /* Renderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 994202D21A686EC6003D80F5 /* Renderer.mm */; };
+		994202D81A6EBC5F003D80F5 /* Transforms.mm in Sources */ = {isa = PBXBuildFile; fileRef = 994202D71A6EBC5F003D80F5 /* Transforms.mm */; };
+		994202DB1A6EFCA0003D80F5 /* processTexturedQuad.metal in Sources */ = {isa = PBXBuildFile; fileRef = 994202DA1A6EFCA0003D80F5 /* processTexturedQuad.metal */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -40,7 +42,10 @@
 		2F4032751A6C8C4300DBB511 /* Quad.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Quad.h; sourceTree = "<group>"; };
 		2F4032761A6C8C4300DBB511 /* Quad.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = Quad.mm; sourceTree = "<group>"; };
 		994202D11A686EC6003D80F5 /* Renderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Renderer.h; sourceTree = "<group>"; };
-		994202D21A686EC6003D80F5 /* Renderer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Renderer.m; sourceTree = "<group>"; };
+		994202D21A686EC6003D80F5 /* Renderer.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = Renderer.mm; sourceTree = "<group>"; };
+		994202D71A6EBC5F003D80F5 /* Transforms.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = Transforms.mm; path = ../Transforms.mm; sourceTree = "<group>"; };
+		994202D91A6EBC9E003D80F5 /* Transforms.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = Transforms.h; path = ../Transforms.h; sourceTree = "<group>"; };
+		994202DA1A6EFCA0003D80F5 /* processTexturedQuad.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = processTexturedQuad.metal; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -80,18 +85,21 @@
 			children = (
 				2F40324C1A683B9600DBB511 /* AppDelegate.h */,
 				2F40324D1A683B9600DBB511 /* AppDelegate.m */,
-				2F40324F1A683B9600DBB511 /* MetalViewController.h */,
-				2F4032501A683B9600DBB511 /* MetalViewController.m */,
-				2F4032521A683B9600DBB511 /* Main.storyboard */,
 				2F4032551A683B9600DBB511 /* Images.xcassets */,
 				2F4032571A683B9600DBB511 /* LaunchScreen.xib */,
-				2F4032481A683B9600DBB511 /* Supporting Files */,
+				2F4032521A683B9600DBB511 /* Main.storyboard */,
 				2F4032721A683FC900DBB511 /* MetalView.h */,
 				2F4032731A683FC900DBB511 /* MetalView.m */,
-				994202D11A686EC6003D80F5 /* Renderer.h */,
-				994202D21A686EC6003D80F5 /* Renderer.m */,
+				2F40324F1A683B9600DBB511 /* MetalViewController.h */,
+				2F4032501A683B9600DBB511 /* MetalViewController.m */,
 				2F4032751A6C8C4300DBB511 /* Quad.h */,
 				2F4032761A6C8C4300DBB511 /* Quad.mm */,
+				994202D11A686EC6003D80F5 /* Renderer.h */,
+				994202D21A686EC6003D80F5 /* Renderer.mm */,
+				2F4032481A683B9600DBB511 /* Supporting Files */,
+				994202D91A6EBC9E003D80F5 /* Transforms.h */,
+				994202D71A6EBC5F003D80F5 /* Transforms.mm */,
+				994202DA1A6EFCA0003D80F5 /* processTexturedQuad.metal */,
 			);
 			path = ComputeMetal;
 			sourceTree = "<group>";
@@ -194,10 +202,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				2F4032771A6C8C4300DBB511 /* Quad.mm in Sources */,
+				994202DB1A6EFCA0003D80F5 /* processTexturedQuad.metal in Sources */,
+				994202D81A6EBC5F003D80F5 /* Transforms.mm in Sources */,
 				2F4032741A683FC900DBB511 /* MetalView.m in Sources */,
 				2F4032511A683B9600DBB511 /* MetalViewController.m in Sources */,
 				2F40324E1A683B9600DBB511 /* AppDelegate.m in Sources */,
-				994202D31A686EC6003D80F5 /* Renderer.m in Sources */,
+				994202D31A686EC6003D80F5 /* Renderer.mm in Sources */,
 				2F40324B1A683B9600DBB511 /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -308,9 +318,12 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				INFOPLIST_FILE = ComputeMetal/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE = "";
 			};
 			name = Debug;
 		};
@@ -318,9 +331,12 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				INFOPLIST_FILE = ComputeMetal/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE = "";
 			};
 			name = Release;
 		};

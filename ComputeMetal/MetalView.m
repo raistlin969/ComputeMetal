@@ -35,7 +35,7 @@
     
     _device = MTLCreateSystemDefaultDevice();
     _metalLayer.device = _device;
-    _metalLayer.pixelFormat = MTLPixelFormatRGBA32Float;
+    _metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
     
     //this is the default, but if we want to perform compute on final redering, set to no
     _metalLayer.framebufferOnly = YES;
@@ -160,7 +160,7 @@
     id<CAMetalDrawable> drawable = self.currentDrawable;
     if(!drawable)
     {
-        NSLog(@"ERROR:vFailed to get a drawable");
+        NSLog(@"ERROR: Failed to get a drawable");
         _renderPassDescriptor = nil;
     }
     else
