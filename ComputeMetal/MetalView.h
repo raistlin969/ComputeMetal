@@ -23,6 +23,8 @@
 //the current drawable within the views CAMetalLayer
 @property(nonatomic, strong, readonly) id<CAMetalDrawable> currentDrawable;
 
+@property(nonatomic, readonly)CGSize metalLayerDrawableSize;
+
 //the current framebuffer can be read by delegate during -[MetalViewDelegate render:]
 //this call may block until the framebuffer is available
 @property(nonatomic, strong, readonly) MTLRenderPassDescriptor *renderPassDescriptor;

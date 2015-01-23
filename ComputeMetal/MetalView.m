@@ -26,6 +26,11 @@
     return [CAMetalLayer class];
 }
 
+- (CGSize)metalLayerDrawableSize
+{
+    return _metalLayer.drawableSize;
+}
+
 - (void)initCommon
 {
     self.opaque = YES;
@@ -43,7 +48,10 @@
 
 - (void)didMoveToWindow
 {
-    self.contentScaleFactor = self.window.screen.nativeScale;
+    self.contentScaleFactor = [UIScreen mainScreen].scale;
+    UIScreen *mainScreen = [UIScreen mainScreen];
+    NSLog(@"Screen bounds: %@, Screen resolution: %@, scale: %f, nativeScale: %f",
+          NSStringFromCGRect(mainScreen.bounds), mainScreen.coordinateSpace, mainScreen.scale, mainScreen.nativeScale);
 }
 
 -(instancetype)initWithCoder:(NSCoder *)aDecoder

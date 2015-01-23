@@ -8,6 +8,7 @@
 
 #include <metal_stdlib>
 #include <metal_texture>
+#include <metal_geometric>
 
 using namespace metal;
 
@@ -39,8 +40,18 @@ fragment float4 texturedQuadFragment(VertexInOut inFrag [[stage_in]],
 
 kernel void test(texture2d<float, access::read> inTexture [[texture(0)]],
                  texture2d<float, access::write> outTexture [[texture(1)]],
-                 uint2 gid [[thread_position_in_grid]])
+                 uint2 gid [[thread_position_in_grid]],
+                 uint2 tid [[threadgroup_position_in_grid]],
+                 uint index [[thread_index_in_threadgroup]],
+                 uint2 tgpg [[threadgroups_per_grid]],
+                 uint2 tpg [[threads_per_grid]],
+                 uint2 tpgr [[threads_per_threadgroup]],
+                 uint2 tptg [[thread_position_in_threadgroup]])
 {
-    float4 color = float4(1.0, 0.0, 0.0, 1.0);
+    float r = tptg.x / (float)tpgr.x;
+    float g = tptg.y / (float)tpgr.y;
+//    float2 dd = (float2)gid;
+    //float2 rg = normalize(dd);
+    float4 color = float4(r, g, 0.0, 1.0);
     outTexture.write(color, gid);
 }

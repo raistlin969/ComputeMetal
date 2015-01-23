@@ -148,7 +148,7 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
     MTLTextureDescriptor *desc = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatBGRA8Unorm width:_size.width height:_size.height mipmapped:NO];
     if(!desc)
     {
-        NSLog(@"ERROR: Failed creating a texture 2d descriptor with RGBA 16 float format");
+        NSLog(@"ERROR: Failed creating a texture 2d descriptor with RGBA 8 unorm format");
         return NO;
     }
 
@@ -278,8 +278,8 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
     CAMetalLayer *metalLayer = (CAMetalLayer *)view.layer;
     metalLayer.framebufferOnly = NO;
 
-    _size.width = view.bounds.size.width;
-    _size.height = view.bounds.size.height;
+    _size.width = [UIScreen mainScreen].nativeBounds.size.width;
+    _size.height = [UIScreen mainScreen].nativeBounds.size.height;
 
     if(![self preparePipelineState])
     {
@@ -318,7 +318,11 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
         [computeEncoder setComputePipelineState:_kernal];
         [computeEncoder setTexture:_outTexture atIndex:0];
         [computeEncoder setTexture:_outTexture atIndex:1];
-        [computeEncoder dispatchThreadgroups:_localCount threadsPerThreadgroup:_workgroupSize];
+        MTLSize threadsPerGroup = {16, 16, 1};
+        MTLSize numThreadGroups = {_outTexture.width/threadsPerGroup.width,
+            _outTexture.height/threadsPerGroup.height, 1};
+//        [computeEncoder dispatchThreadgroups:_localCount threadsPerThreadgroup:_workgroupSize];
+        [computeEncoder dispatchThreadgroups:numThreadGroups threadsPerThreadgroup:threadsPerGroup];
         [computeEncoder endEncoding];
     }
 }
