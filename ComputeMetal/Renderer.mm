@@ -278,8 +278,13 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
     CAMetalLayer *metalLayer = (CAMetalLayer *)view.layer;
     metalLayer.framebufferOnly = NO;
 
-    _size.width = [UIScreen mainScreen].nativeBounds.size.width;
-    _size.height = [UIScreen mainScreen].nativeBounds.size.height;
+    int w = [UIScreen mainScreen].bounds.size.width;
+    float scale = [UIScreen mainScreen].scale;
+    int ww = w * scale;
+    int h = [UIScreen mainScreen].bounds.size.height;
+    int hh = h * scale;
+    _size.width = ww;//[UIScreen mainScreen].nativeBounds.size.width;
+    _size.height = hh;//[UIScreen mainScreen].nativeBounds.size.height;
 
     if(![self preparePipelineState])
     {
