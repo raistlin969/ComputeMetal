@@ -67,6 +67,10 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
     simd::float4x4 _transform;
     id<MTLBuffer> _transformBuffer;
 
+
+    id<MTLBuffer> _copyFrom;
+    id<MTLBuffer> _copyTo;
+
 }
 
 - (instancetype)init
@@ -159,6 +163,14 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
         return NO;
     }
 
+    _copyFrom = [_device newBufferWithLength:_size.width * _size.height * sizeof(simd::float4) options:0];
+    if(!_copyFrom)
+    {
+        NSLog(@"ERROR: Failed creating copy from buffer");
+        return NO;
+    }
+    _copyFrom.label = @"Copy From Compute Buffer";
+
     //set the compute kernals workgroup size and count
     _workgroupSize = MTLSizeMake(1, 1, 1);
     _localCount = MTLSizeMake(_size.width, _size.height, 1);
@@ -205,6 +217,14 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
         NSLog(@"ERROR: Failed acquiring pipeline state description: %@", error);
         return NO;
     }
+
+    _copyTo = [_device newBufferWithLength:_size.width * _size.height * sizeof(simd::float4) options:0];
+    if(!_copyTo)
+    {
+        NSLog(@"ERROR: Failed creating copy to buffer");
+        return NO;
+    }
+    _copyTo.label =@"Copy to fragment buffer";
     return YES;
 }
 
@@ -322,7 +342,8 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
     {
         [computeEncoder setComputePipelineState:_kernal];
         [computeEncoder setTexture:_outTexture atIndex:0];
-        [computeEncoder setTexture:_outTexture atIndex:1];
+//        [computeEncoder setTexture:_outTexture atIndex:1];
+        [computeEncoder setBuffer:_copyFrom offset:0 atIndex:0];
         MTLSize threadsPerGroup = {16, 16, 1};
         MTLSize numThreadGroups = {_outTexture.width/threadsPerGroup.width,
             _outTexture.height/threadsPerGroup.height, 1};
@@ -344,6 +365,7 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
 
         //
         [renderEncoder setFragmentTexture:_outTexture atIndex:0];
+        [renderEncoder setFragmentBuffer:_copyTo offset:0 atIndex:0];
 
         //encode quad vertex and yexture coordinate buffers
         [_quad encode:renderEncoder];
@@ -382,6 +404,12 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
 
     //compute
     [self compute:commandBuffer];
+
+    id<MTLBlitCommandEncoder> blit = [commandBuffer blitCommandEncoder];
+
+    [blit copyFromBuffer:_copyFrom sourceOffset:0 toBuffer:_copyTo destinationOffset:0 size:sizeof(simd::float4)];
+
+    [blit endEncoding];
 
     //create a render command encoder so we can render into something
     MTLRenderPassDescriptor *renderPassDescriptor = view.renderPassDescriptor;

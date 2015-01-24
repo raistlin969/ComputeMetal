@@ -29,29 +29,28 @@ vertex VertexInOut texturedQuadVertex(constant float4 *position [[buffer(0)]],
 }
 
 fragment float4 texturedQuadFragment(VertexInOut inFrag [[stage_in]],
-                                     texture2d<float> tex2D [[texture(0)]])
+                                     texture2d<float> tex2D [[texture(0)]],
+                                     constant float4 *ccc [[buffer(0)]],
+                                     float4 pos [[position]])
 {
     constexpr sampler quad_sampler;
 
     float4 color = tex2D.sample(quad_sampler, inFrag._texCoord);
 
     return color;
+    //uint2 p = (uint2)pos.xy;
+    //return ccc[p.x][p.y];
 }
 
-kernel void test(texture2d<float, access::read> inTexture [[texture(0)]],
-                 texture2d<float, access::write> outTexture [[texture(1)]],
+kernel void test(texture2d<float, access::write> outTexture [[texture(0)]],
+                 device float4 *cc [[buffer(0)]],
                  uint2 gid [[thread_position_in_grid]],
-                 uint2 tid [[threadgroup_position_in_grid]],
-                 uint index [[thread_index_in_threadgroup]],
-                 uint2 tgpg [[threadgroups_per_grid]],
-                 uint2 tpg [[threads_per_grid]],
                  uint2 tpgr [[threads_per_threadgroup]],
                  uint2 tptg [[thread_position_in_threadgroup]])
 {
     float r = tptg.x / (float)tpgr.x;
     float g = tptg.y / (float)tpgr.y;
-//    float2 dd = (float2)gid;
-    //float2 rg = normalize(dd);
     float4 color = float4(r, g, 0.0, 1.0);
     outTexture.write(color, gid);
+    //cc[gid.x * gid.y] = color;
 }
