@@ -30,11 +30,33 @@ vertex VertexInOut texturedQuadVertex(constant float4 *position [[buffer(0)]],
 
 fragment float4 texturedQuadFragment(VertexInOut inFrag [[stage_in]],
                                      texture2d<float> tex2D [[texture(0)]],
+                                     constant float4 *newColor [[buffer(0)]],
                                      float4 pos [[position]])
 {
     constexpr sampler quad_sampler;
 
-    float4 color = tex2D.sample(quad_sampler, inFrag._texCoord);
+    float4 color = float4(0.0, 0.0, 0.0, 1.0);
+    float2 z = inFrag._texCoord;
+    z *= float2(3.0, 2.0);
+    z -= float2(2.0, 1.0);
+
+    float2 c = z;
+    uint it = 0;
+    for(int i = 0; i < 256; i++)
+    {
+        z = float2(z.x * z.x - z.y * z.y, 2.0 * z.x * z.y);
+        z += c;
+
+        if(dot(z,z) > 4.0)
+            break;
+
+        it++;
+    }
+
+    if(it < 256)
+        color = newColor[0];
+
+    //float4 color = tex2D.sample(quad_sampler, inFrag._texCoord);
     return color;
 }
 

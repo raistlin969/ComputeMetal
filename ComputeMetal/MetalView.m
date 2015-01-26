@@ -35,6 +35,7 @@
 {
     self.opaque = YES;
     self.backgroundColor = nil;
+    self.changeColors = NO;
     
     _metalLayer = (CAMetalLayer *)self.layer;
     

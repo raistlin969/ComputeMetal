@@ -17,6 +17,8 @@
 #import "Quad.h"
 #import "MetalView.h"
 
+#define ARC4RANDOM_MAX      0x100000000
+
 static const float UI_INTERFACE_ORIENTATION_LANDSCAPE_ANGLE = 35.0f;
 static const float UI_INTERFACE_ORIENTATION_PORTRAIT_ANGLE = 50.0f;
 
@@ -67,6 +69,9 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
     simd::float4x4 _transform;
     id<MTLBuffer> _transformBuffer;
 
+    simd::float4 _color;
+    id<MTLBuffer> _colorBuffer;
+
 }
 
 - (instancetype)init
@@ -79,6 +84,7 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
         _depthPixelFormat = MTLPixelFormatInvalid;
         _stencilPixelFormat = MTLPixelFormatInvalid;
         _constantDataBufferIndex = 0;
+        _color = {1.0, 0.0, 0.0, 1.0};
 
         //create a default system device
         _device = MTLCreateSystemDefaultDevice();
@@ -237,6 +243,7 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
         return NO;
     }
     _quad.size = _size;
+    _colorBuffer = [_device newBufferWithBytes:&_color length:sizeof(simd::float4) options:0];
     return YES;
 }
 
@@ -276,8 +283,8 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
     //we need to set the framebuffer only property of the layer to No so we
     //can perform compute on the drawables texture.
 
-    CAMetalLayer *metalLayer = (CAMetalLayer *)view.layer;
-    metalLayer.framebufferOnly = NO;
+//    CAMetalLayer *metalLayer = (CAMetalLayer *)view.layer;
+//    metalLayer.framebufferOnly = NO;
 
     int w = [UIScreen mainScreen].bounds.size.width;
     float scale = [UIScreen mainScreen].scale;
@@ -309,7 +316,7 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
 
     //prepare transform buffers
 
-    _orientation = UIInterfaceOrientationUnknown;
+    _orientation = UIInterfaceOrientationLandscapeRight;
 
     //prepare transforms
 }
@@ -344,6 +351,7 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
 
         //
         [renderEncoder setFragmentTexture:_outTexture atIndex:0];
+        [renderEncoder setFragmentBuffer:_colorBuffer offset:0 atIndex:0];
 
         //encode quad vertex and yexture coordinate buffers
         [_quad encode:renderEncoder];
@@ -381,7 +389,7 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
     id<MTLCommandBuffer> commandBuffer = [_commandQueue commandBuffer];
 
     //compute
-    [self compute:commandBuffer];
+//    [self compute:commandBuffer];
 
     //create a render command encoder so we can render into something
     MTLRenderPassDescriptor *renderPassDescriptor = view.renderPassDescriptor;
@@ -391,8 +399,19 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
         //get a render encoder
         id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
 
+        if(view.changeColors)
+        {
+            simd::float4 *color = (simd::float4*)[_colorBuffer contents];
+            color->x = ((float)arc4random() / ARC4RANDOM_MAX);
+            color->y = ((float)arc4random() / ARC4RANDOM_MAX);
+            color->z = ((float)arc4random() / ARC4RANDOM_MAX);
+            view.changeColors = NO;
+        }
+
         //render textured quad
         [self encode:renderEncoder];
+
+        
 
         //dispatch the command buffer
         __block dispatch_semaphore_t dispatchSemaphore = _inFlightSemaphore;

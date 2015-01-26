@@ -17,6 +17,8 @@
 
 @property(nonatomic, weak) IBOutlet id<MetalViewDelegate> metalViewDelegate;
 
+@property(nonatomic) BOOL changeColors;
+
 //view has handle to the metal device when created
 @property(nonatomic, strong, readonly) id<MTLDevice> device;
 

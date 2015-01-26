@@ -212,6 +212,21 @@
     [self stopGameLoop];
 }
 
+- (void)viewDidAppear:(BOOL)animated
+{
+    [super viewDidAppear:animated];
+
+    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapDidRecognize:)];
+
+    [self.view addGestureRecognizer:tap];
+}
+
+- (void)tapDidRecognize:(UITapGestureRecognizer *)tap
+{
+    MetalView *mv = (MetalView *)self.view;
+    mv.changeColors = YES;
+}
+
 @end
 
 
