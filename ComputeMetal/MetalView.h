@@ -20,6 +20,7 @@
 @property(nonatomic) BOOL changeColors;
 @property(nonatomic) float panX;
 @property(nonatomic) float panY;
+@property(nonatomic) float zoom;
 
 //view has handle to the metal device when created
 @property(nonatomic, strong, readonly) id<MTLDevice> device;

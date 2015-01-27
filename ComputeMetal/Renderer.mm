@@ -430,6 +430,15 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
             
             _data.pan.x = view.panX;
             _data.pan.y = view.panY;
+
+            NSLog(@"%f,  %f", _data.pan.x, _data.pan.y);
+        }
+
+        if(view.zoom != _data.zoom)
+        {
+            MandelData *data = (MandelData*)[_dataBuffer contents];
+            data->zoom = view.zoom;
+            _data.zoom = view.zoom;
         }
 
         //render textured quad

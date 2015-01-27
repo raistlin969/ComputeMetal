@@ -28,6 +28,9 @@
 
     //renderer instance
     Renderer *_renderer;
+
+    float _previousX;
+    float _previousY;
 }
 
 -( void)dealloc
@@ -237,21 +240,31 @@
 
 - (void)pinchDidRecognize:(UIPinchGestureRecognizer *)pinch
 {
+    MetalView *view = (MetalView *)self.view;
 
+    if(pinch.scale < 1.0)
+        view.zoom *= 1.05;
+    else
+        view.zoom /= 1.05;
 }
 
 - (void)panDidRecognize:(UIPanGestureRecognizer *)pan
 {
     CGPoint translatedPoint = [pan translationInView:self.view];
-    CGPoint velocity = [pan velocityInView:self.view];
-    if(pan.state != UIGestureRecognizerStateBegan)
+    MetalView *view = (MetalView *)self.view;
+    float panSesitivity = (float)log(view.zoom + 1);
+    if(pan.state == UIGestureRecognizerStateBegan)
+    {
+        _previousX = view.panX;
+        _previousY = view.panY;
+    }
+    else
     {
 //        res = ( src - src_min ) / ( src_max - src_min ) * ( res_max - res_min ) + res_min
-        float x = (translatedPoint.x - 0) / (1024.0 - 0) * (1.0 - -1.0);// + -1.0;
-        float y = translatedPoint.y / 768.0 * -2;
-        NSLog(@"%f,  %f  %f", velocity.x, velocity.y, y);
-        ((MetalView *)self.view).panX = x;
-        ((MetalView *)self.view).panY = y;
+        float x = (translatedPoint.x / view.bounds.size.width * 2.0) * panSesitivity;
+        float y = (translatedPoint.y / view.bounds.size.height * -2.0) * panSesitivity;
+        ((MetalView *)self.view).panX = x + _previousX;
+        ((MetalView *)self.view).panY = y + _previousY;
     }
 }
 

@@ -38,6 +38,7 @@
     self.changeColors = NO;
     self.panX = 0.5;
     self.panY = 0.0;
+    self.zoom = 3.0;
     
     _metalLayer = (CAMetalLayer *)self.layer;
     
