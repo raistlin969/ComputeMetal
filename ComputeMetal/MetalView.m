@@ -36,6 +36,8 @@
     self.opaque = YES;
     self.backgroundColor = nil;
     self.changeColors = NO;
+    self.panX = 0.5;
+    self.panY = 0.0;
     
     _metalLayer = (CAMetalLayer *)self.layer;
     
@@ -204,7 +206,7 @@
             _metalLayer.drawableSize = drawableSize;
             
             //renderer delegate method so renderer can resize anything if needed
-            [_metalViewDelegate reshape:self];
+            //[_metalViewDelegate reshape:self];
             
             _layerSizeDidUpdate = NO;
         }

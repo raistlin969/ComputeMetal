@@ -243,10 +243,16 @@
 - (void)panDidRecognize:(UIPanGestureRecognizer *)pan
 {
     CGPoint translatedPoint = [pan translationInView:self.view];
-    //if(pan.state == UIGestureRecognizerStateEnded)
-    //{
-        NSLog(@"%f,  %f", translatedPoint.x, translatedPoint.y);
-    //}
+    CGPoint velocity = [pan velocityInView:self.view];
+    if(pan.state != UIGestureRecognizerStateBegan)
+    {
+//        res = ( src - src_min ) / ( src_max - src_min ) * ( res_max - res_min ) + res_min
+        float x = (translatedPoint.x - 0) / (1024.0 - 0) * (1.0 - -1.0);// + -1.0;
+        float y = translatedPoint.y / 768.0 * -2;
+        NSLog(@"%f,  %f  %f", velocity.x, velocity.y, y);
+        ((MetalView *)self.view).panX = x;
+        ((MetalView *)self.view).panY = y;
+    }
 }
 
 @end

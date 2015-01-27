@@ -421,6 +421,16 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
             color->z = ((float)arc4random() / ARC4RANDOM_MAX);
             view.changeColors = NO;
         }
+        
+        if(view.panX != _data.pan.x || view.panY != _data.pan.y)
+        {
+            MandelData *data = (MandelData*)[_dataBuffer contents];
+            data->pan.x = view.panX;
+            data->pan.y = view.panY;
+            
+            _data.pan.x = view.panX;
+            _data.pan.y = view.panY;
+        }
 
         //render textured quad
         [self encode:renderEncoder];
