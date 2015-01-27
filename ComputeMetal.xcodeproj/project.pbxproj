@@ -46,6 +46,7 @@
 		994202D71A6EBC5F003D80F5 /* Transforms.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = Transforms.mm; path = ../Transforms.mm; sourceTree = "<group>"; };
 		994202D91A6EBC9E003D80F5 /* Transforms.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = Transforms.h; path = ../Transforms.h; sourceTree = "<group>"; };
 		994202DA1A6EFCA0003D80F5 /* processTexturedQuad.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = processTexturedQuad.metal; sourceTree = "<group>"; };
+		99D261D01A77073D00D8D5AA /* Common.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Common.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -100,6 +101,7 @@
 				994202D91A6EBC9E003D80F5 /* Transforms.h */,
 				994202D71A6EBC5F003D80F5 /* Transforms.mm */,
 				994202DA1A6EFCA0003D80F5 /* processTexturedQuad.metal */,
+				99D261D01A77073D00D8D5AA /* Common.h */,
 			);
 			path = ComputeMetal;
 			sourceTree = "<group>";

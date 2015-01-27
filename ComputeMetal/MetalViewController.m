@@ -219,12 +219,34 @@
     UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapDidRecognize:)];
 
     [self.view addGestureRecognizer:tap];
+
+    UIPanGestureRecognizer *pan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(panDidRecognize:)];
+    pan.minimumNumberOfTouches = 1;
+    pan.maximumNumberOfTouches = 1;
+    [self.view addGestureRecognizer:pan];
+
+    UIPinchGestureRecognizer *pinch = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(pinchDidRecognize:)];
+    [self.view addGestureRecognizer:pinch];
 }
 
 - (void)tapDidRecognize:(UITapGestureRecognizer *)tap
 {
     MetalView *mv = (MetalView *)self.view;
     mv.changeColors = YES;
+}
+
+- (void)pinchDidRecognize:(UIPinchGestureRecognizer *)pinch
+{
+
+}
+
+- (void)panDidRecognize:(UIPanGestureRecognizer *)pan
+{
+    CGPoint translatedPoint = [pan translationInView:self.view];
+    //if(pan.state == UIGestureRecognizerStateEnded)
+    //{
+        NSLog(@"%f,  %f", translatedPoint.x, translatedPoint.y);
+    //}
 }
 
 @end

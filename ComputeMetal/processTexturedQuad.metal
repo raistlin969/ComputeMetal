@@ -10,6 +10,8 @@
 #include <metal_texture>
 #include <metal_geometric>
 
+#include "Common.h"
+
 using namespace metal;
 
 struct VertexInOut
@@ -31,14 +33,19 @@ vertex VertexInOut texturedQuadVertex(constant float4 *position [[buffer(0)]],
 fragment float4 texturedQuadFragment(VertexInOut inFrag [[stage_in]],
                                      texture2d<float> tex2D [[texture(0)]],
                                      constant float4 *newColor [[buffer(0)]],
+                                     constant MandelData *data [[buffer(1)]],
                                      float4 pos [[position]])
 {
     constexpr sampler quad_sampler;
 
     float4 color = float4(0.0, 0.0, 0.0, 1.0);
-    float2 z = inFrag._texCoord;
-    z *= float2(3.0, 2.0);
-    z -= float2(2.0, 1.0);
+    float2 pan = data[0].pan;
+    float zoom = data[0].zoom;
+    float aspect = data[0].aspect;
+
+    float2 z = (inFrag._texCoord - 0.5) * zoom * float2(1, aspect) - pan;
+//    z *= float2(3.0, 2.0);
+//    z -= float2(2.0, 1.0);
 
     float2 c = z;
     uint it = 0;

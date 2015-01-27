@@ -17,6 +17,8 @@
 #import "Quad.h"
 #import "MetalView.h"
 
+#import "Common.h"
+
 #define ARC4RANDOM_MAX      0x100000000
 
 static const float UI_INTERFACE_ORIENTATION_LANDSCAPE_ANGLE = 35.0f;
@@ -72,6 +74,9 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
     simd::float4 _color;
     id<MTLBuffer> _colorBuffer;
 
+    MandelData _data;
+    id<MTLBuffer> _dataBuffer;
+
 }
 
 - (instancetype)init
@@ -85,6 +90,10 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
         _stencilPixelFormat = MTLPixelFormatInvalid;
         _constantDataBufferIndex = 0;
         _color = {1.0, 0.0, 0.0, 1.0};
+
+        _data.aspect = 1.0;
+        _data.zoom = 3;
+        _data.pan = {0.5, 0.0};
 
         //create a default system device
         _device = MTLCreateSystemDefaultDevice();
@@ -244,6 +253,8 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
     }
     _quad.size = _size;
     _colorBuffer = [_device newBufferWithBytes:&_color length:sizeof(simd::float4) options:0];
+
+    _dataBuffer = [_device newBufferWithBytes:&_data length:sizeof(MandelData) options:0];
     return YES;
 }
 
@@ -293,6 +304,8 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
     int hh = h * scale;
     _size.width = ww;//[UIScreen mainScreen].nativeBounds.size.width;
     _size.height = hh;//[UIScreen mainScreen].nativeBounds.size.height;
+
+//    _data.aspect = float(ww) / float (hh);
 
     if(![self preparePipelineState])
     {
@@ -352,6 +365,7 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
         //
         [renderEncoder setFragmentTexture:_outTexture atIndex:0];
         [renderEncoder setFragmentBuffer:_colorBuffer offset:0 atIndex:0];
+        [renderEncoder setFragmentBuffer:_dataBuffer offset:0 atIndex:1];
 
         //encode quad vertex and yexture coordinate buffers
         [_quad encode:renderEncoder];
