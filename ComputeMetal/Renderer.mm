@@ -77,6 +77,8 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
     MandelData _data;
     id<MTLBuffer> _dataBuffer;
 
+    id<MTLTexture> _otherTexture;
+
 }
 
 - (instancetype)init
@@ -211,6 +213,10 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
     quadPipelineStateDescriptor.sampleCount = _sampleCount;
     quadPipelineStateDescriptor.vertexFunction = vertexProgram;
     quadPipelineStateDescriptor.fragmentFunction = fragmentProgram;
+
+    quadPipelineStateDescriptor.colorAttachments[1].pixelFormat = MTLPixelFormatRG32Float;
+    MTLTextureDescriptor *desc = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRG32Float width:_size.width height:_size.height mipmapped:NO];
+    _otherTexture = [_device newTextureWithDescriptor:desc];
 
     NSError *error = nil;
 
@@ -410,36 +416,12 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
 
     if(renderPassDescriptor)
     {
+        renderPassDescriptor.colorAttachments[1].texture = _otherTexture;
+
         //get a render encoder
         id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
 
-        if(view.changeColors)
-        {
-            simd::float4 *color = (simd::float4*)[_colorBuffer contents];
-            color->x = ((float)arc4random() / ARC4RANDOM_MAX);
-            color->y = ((float)arc4random() / ARC4RANDOM_MAX);
-            color->z = ((float)arc4random() / ARC4RANDOM_MAX);
-            view.changeColors = NO;
-        }
-        
-        if(view.panX != _data.pan.x || view.panY != _data.pan.y)
-        {
-            MandelData *data = (MandelData*)[_dataBuffer contents];
-            data->pan.x = view.panX;
-            data->pan.y = view.panY;
-            
-            _data.pan.x = view.panX;
-            _data.pan.y = view.panY;
 
-            NSLog(@"%f,  %f", _data.pan.x, _data.pan.y);
-        }
-
-        if(view.zoom != _data.zoom)
-        {
-            MandelData *data = (MandelData*)[_dataBuffer contents];
-            data->zoom = view.zoom;
-            _data.zoom = view.zoom;
-        }
 
         //render textured quad
         [self encode:renderEncoder];
@@ -464,7 +446,35 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
 //this method is called from the thread the main game loop is run
 - (void)update:(MetalViewController *)controller
 {
+    MetalView *view = (MetalView *)controller.view;
     //not used
+    if(view.changeColors)
+    {
+        simd::float4 *color = (simd::float4*)[_colorBuffer contents];
+        color->x = ((float)arc4random() / ARC4RANDOM_MAX);
+        color->y = ((float)arc4random() / ARC4RANDOM_MAX);
+        color->z = ((float)arc4random() / ARC4RANDOM_MAX);
+        view.changeColors = NO;
+    }
+
+    if(view.panX != _data.pan.x || view.panY != _data.pan.y)
+    {
+        MandelData *data = (MandelData*)[_dataBuffer contents];
+        data->pan.x = view.panX;
+        data->pan.y = view.panY;
+
+        _data.pan.x = view.panX;
+        _data.pan.y = view.panY;
+
+        NSLog(@"%f,  %f", _data.pan.x, _data.pan.y);
+    }
+
+    if(view.zoom != _data.zoom)
+    {
+        MandelData *data = (MandelData*)[_dataBuffer contents];
+        data->zoom = view.zoom;
+        _data.zoom = view.zoom;
+    }
 }
 
 //called whenever the main game loop is paused, such as when the app is backgrounded

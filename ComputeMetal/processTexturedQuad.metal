@@ -30,7 +30,7 @@ vertex VertexInOut texturedQuadVertex(constant float4 *position [[buffer(0)]],
     return out;
 }
 
-fragment float4 texturedQuadFragment(VertexInOut inFrag [[stage_in]],
+fragment FragOutput texturedQuadFragment(VertexInOut inFrag [[stage_in]],
                                      texture2d<float> tex2D [[texture(0)]],
                                      constant float4 *newColor [[buffer(0)]],
                                      constant MandelData *data [[buffer(1)]],
@@ -64,7 +64,10 @@ fragment float4 texturedQuadFragment(VertexInOut inFrag [[stage_in]],
         color = newColor[0];
 
     //float4 color = tex2D.sample(quad_sampler, inFrag._texCoord);
-    return color;
+    FragOutput output;
+    output.out1 = color;
+    output.out2 = float2(0.0, 1.0);
+    return output;
 }
 
 kernel void test(texture2d<float, access::write> outTexture [[texture(0)]],

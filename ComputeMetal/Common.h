@@ -22,6 +22,11 @@ typedef struct
     float aspect;
 } MandelData;
 
+typedef struct
+{
+    float4 out1 [[color(0)]];
+    float2 out2 [[color(1)]];
+} FragOutput;
 
 #endif
 
