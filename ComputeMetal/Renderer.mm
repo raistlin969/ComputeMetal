@@ -16,10 +16,9 @@
 #import "Transforms.h"
 #import "Quad.h"
 #import "MetalView.h"
-
+#import "Mandelbrot.h"
 #import "Common.h"
 
-#define ARC4RANDOM_MAX      0x100000000
 
 static const float UI_INTERFACE_ORIENTATION_LANDSCAPE_ANGLE = 35.0f;
 static const float UI_INTERFACE_ORIENTATION_PORTRAIT_ANGLE = 50.0f;
@@ -78,7 +77,7 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
     id<MTLBuffer> _dataBuffer;
 
     id<MTLTexture> _otherTexture;
-
+    Mandelbrot *_mandelbrot;
 }
 
 - (instancetype)init
@@ -123,6 +122,8 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
         }
 
         _inFlightSemaphore = dispatch_semaphore_create(IN_FLIGHT_COMMAND_BUFFERS);
+
+        _mandelbrot = [[Mandelbrot alloc] initWithDevice:_device Library:_shaderLibrary];
     }
     return self;
 }
@@ -137,6 +138,7 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
     _commandQueue = nil;
     _outTexture = nil;
     _quad = nil;
+    _mandelbrot = nil;
 }
 
 #pragma mark Setup
@@ -311,25 +313,28 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
     _size.width = ww;//[UIScreen mainScreen].nativeBounds.size.width;
     _size.height = hh;//[UIScreen mainScreen].nativeBounds.size.height;
 
+
+    [_mandelbrot configure:view];
+
 //    _data.aspect = float(ww) / float (hh);
 
-    if(![self preparePipelineState])
-    {
-        NSLog(@"ERROR: Failed creating a pipeline state");
-        assert(0);
-    }
-
-    if(![self prepareTexturedQuad])
-    {
-        NSLog(@"ERROR: Failed creating a textured quad");
-        assert(0);
-    }
-
-    if(![self prepareCompute])
-    {
-        NSLog(@"ERROR: Failed creating a compute stage");
-        assert(0);
-    }
+//    if(![self preparePipelineState])
+//    {
+//        NSLog(@"ERROR: Failed creating a pipeline state");
+//        assert(0);
+//    }
+//
+//    if(![self prepareTexturedQuad])
+//    {
+//        NSLog(@"ERROR: Failed creating a textured quad");
+//        assert(0);
+//    }
+//
+//    if(![self prepareCompute])
+//    {
+//        NSLog(@"ERROR: Failed creating a compute stage");
+//        assert(0);
+//    }
 
     //prepare stencil
 
@@ -396,7 +401,8 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
         _orientation = orientation;
 
         //get the bounds for the current rendering layer
-        _quad.bounds = view.layer.frame;
+        //_quad.bounds = view.layer.frame;
+        [_mandelbrot reshape:view];
 
         //TODO: 3d stuff
     }
@@ -416,7 +422,9 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
 
     if(renderPassDescriptor)
     {
-        renderPassDescriptor.colorAttachments[1].texture = _otherTexture;
+//        renderPassDescriptor.colorAttachments[1].texture = _otherTexture;
+
+        [_mandelbrot encode:commandBuffer];
 
         //get a render encoder
         id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
@@ -424,9 +432,9 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
 
 
         //render textured quad
-        [self encode:renderEncoder];
+//        [self encode:renderEncoder];
 
-        
+        [_mandelbrot encodeFinal:renderEncoder];
 
         //dispatch the command buffer
         __block dispatch_semaphore_t dispatchSemaphore = _inFlightSemaphore;
@@ -450,30 +458,18 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
     //not used
     if(view.changeColors)
     {
-        simd::float4 *color = (simd::float4*)[_colorBuffer contents];
-        color->x = ((float)arc4random() / ARC4RANDOM_MAX);
-        color->y = ((float)arc4random() / ARC4RANDOM_MAX);
-        color->z = ((float)arc4random() / ARC4RANDOM_MAX);
+        [_mandelbrot changeColors];
         view.changeColors = NO;
     }
 
     if(view.panX != _data.pan.x || view.panY != _data.pan.y)
     {
-        MandelData *data = (MandelData*)[_dataBuffer contents];
-        data->pan.x = view.panX;
-        data->pan.y = view.panY;
-
-        _data.pan.x = view.panX;
-        _data.pan.y = view.panY;
-
-        NSLog(@"%f,  %f", _data.pan.x, _data.pan.y);
+        [_mandelbrot panX:view.panX Y:view.panY];
     }
 
     if(view.zoom != _data.zoom)
     {
-        MandelData *data = (MandelData*)[_dataBuffer contents];
-        data->zoom = view.zoom;
-        _data.zoom = view.zoom;
+        [_mandelbrot zoom:view.zoom];
     }
 }
 

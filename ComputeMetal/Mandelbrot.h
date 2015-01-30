@@ -9,12 +9,18 @@
 #import <Foundation/Foundation.h>
 #import <Metal/Metal.h>
 #import "Common.h"
+#import "MetalView.h"
 
 @interface Mandelbrot : NSObject
 
-@property(nonatomic) MandelData data;
-
-
 - (instancetype)initWithDevice:(id<MTLDevice>)device Library:(id<MTLLibrary>)library;
+- (BOOL)configure:(MetalView *)view;
+- (void)encode:(id<MTLCommandBuffer>)commandBuffer;
+- (void)encodeFinal:(id<MTLRenderCommandEncoder>)finalEncoder;
+- (void)reshape:(MetalView *)view;
+
+- (void)changeColors;
+- (void)panX:(float)x Y:(float)y;
+- (void)zoom:(float)zoom;
 
 @end
