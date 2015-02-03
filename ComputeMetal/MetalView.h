@@ -18,6 +18,9 @@
 @property(nonatomic, weak) IBOutlet id<MetalViewDelegate> metalViewDelegate;
 
 @property(nonatomic) BOOL changeColors;
+@property(nonatomic) BOOL panNeeded;
+@property(nonatomic) BOOL zoomNeeded;
+
 @property(nonatomic) float panX;
 @property(nonatomic) float panY;
 @property(nonatomic) float zoom;

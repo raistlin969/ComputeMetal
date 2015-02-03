@@ -417,6 +417,8 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
     //compute
 //    [self compute:commandBuffer];
 
+    [_mandelbrot encode:commandBuffer];
+    
     //create a render command encoder so we can render into something
     MTLRenderPassDescriptor *renderPassDescriptor = view.renderPassDescriptor;
 
@@ -424,7 +426,7 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
     {
 //        renderPassDescriptor.colorAttachments[1].texture = _otherTexture;
 
-        [_mandelbrot encode:commandBuffer];
+
 
         //get a render encoder
         id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
@@ -462,14 +464,16 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
         view.changeColors = NO;
     }
 
-    if(view.panX != _data.pan.x || view.panY != _data.pan.y)
+    if(view.panNeeded)
     {
         [_mandelbrot panX:view.panX Y:view.panY];
+        view.panNeeded = NO;
     }
 
-    if(view.zoom != _data.zoom)
+    if(view.zoomNeeded)
     {
         [_mandelbrot zoom:view.zoom];
+        view.zoomNeeded = NO;
     }
 }
 

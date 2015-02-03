@@ -246,6 +246,8 @@
         view.zoom *= 1.05;
     else
         view.zoom /= 1.05;
+
+    view.zoomNeeded = YES;
 }
 
 - (void)panDidRecognize:(UIPanGestureRecognizer *)pan
@@ -262,9 +264,10 @@
     {
 //        res = ( src - src_min ) / ( src_max - src_min ) * ( res_max - res_min ) + res_min
         float x = (translatedPoint.x / view.bounds.size.width * 2.0) * panSesitivity;
-        float y = (translatedPoint.y / view.bounds.size.height * -2.0) * panSesitivity;
-        ((MetalView *)self.view).panX = x + _previousX;
-        ((MetalView *)self.view).panY = y + _previousY;
+        float y = (translatedPoint.y / view.bounds.size.height * 2.0) * panSesitivity;
+        view.panX = x + _previousX;
+        view.panY = y + _previousY;
+        view.panNeeded = YES;
     }
 }
 

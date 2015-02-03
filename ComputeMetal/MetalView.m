@@ -36,6 +36,8 @@
     self.opaque = YES;
     self.backgroundColor = nil;
     self.changeColors = NO;
+    self.panNeeded = NO;
+    self.zoomNeeded = NO;
     self.panX = 0.5;
     self.panY = 0.0;
     self.zoom = 3.0;

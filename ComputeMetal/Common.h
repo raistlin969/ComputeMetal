@@ -20,12 +20,13 @@ typedef struct
     float2 pan;
     float zoom;
     float aspect;
+    uint32_t iteration;
 } MandelData;
 
 typedef struct
 {
     float4 out1 [[color(0)]];
-    float2 out2 [[color(1)]];
+//    float2 out2 [[color(1)]];
 } FragOutput;
 
 #endif
