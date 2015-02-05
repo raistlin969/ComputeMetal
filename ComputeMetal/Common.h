@@ -21,6 +21,8 @@ typedef struct
     float zoom;
     float aspect;
     uint32_t iteration;
+    uint32_t maxIteration;
+    uint32_t iterationStep;
 } MandelData;
 
 typedef struct

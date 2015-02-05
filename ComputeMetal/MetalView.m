@@ -86,7 +86,7 @@
     colorAttachment.texture = texture;
     
     //clear every frame
-    colorAttachment.loadAction = MTLLoadActionClear;
+    colorAttachment.loadAction = MTLLoadActionLoad;
     colorAttachment.clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 1.0);
     
     //if sample count is > 1 then render into msaa

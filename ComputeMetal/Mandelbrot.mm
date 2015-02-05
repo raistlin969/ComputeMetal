@@ -49,8 +49,9 @@
     id<MTLTexture> _texture1;
     id<MTLTexture> _texture2;
 
-    NSUInteger _maxIterations;
+
     BOOL _changed;
+
 }
 
 - (instancetype)initWithDevice:(id<MTLDevice>)device Library:(id<MTLLibrary>)library
@@ -64,7 +65,9 @@
         _data.zoom = 3;
         _data.pan = {0.5, 0.0};
         _data.iteration = 0;
-        _maxIterations = 5;
+        _data.maxIteration = 256;
+        _data.iteration = 0;
+        _data.iterationStep = 20;
         _color = {1.0, 0.0, 0.0, 1.0};
         _changed = YES;
     }
@@ -195,8 +198,10 @@
 {
     id<MTLRenderCommandEncoder> firstPassEncoder = [commandBuffer renderCommandEncoderWithDescriptor:_firstRenderPassDescriptor];
 
+    MandelData *data = (MandelData*)[_mandelDataBuffer contents];
     if(_changed)
     {
+        data->iteration = 0;
         [firstPassEncoder pushDebugGroup:@"First Pass"];
         [firstPassEncoder setFrontFacingWinding:MTLWindingCounterClockwise];
         [firstPassEncoder setRenderPipelineState:_firstPassPipelineState];
@@ -209,16 +214,30 @@
         [firstPassEncoder popDebugGroup];
         _changed = NO;
     }
-    [firstPassEncoder setFragmentTexture:_texture2 atIndex:0];
-    [firstPassEncoder setFrontFacingWinding:MTLWindingCounterClockwise];
-    [firstPassEncoder setRenderPipelineState:_multiPassPipelineState];
-    [firstPassEncoder setFragmentBuffer:_mandelDataBuffer offset:0 atIndex:0];
-    [_quad encode:firstPassEncoder];
-    for(NSUInteger i = 0; i < _maxIterations; i++)
+    if(data->iteration < data->maxIteration)
     {
-        [firstPassEncoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6 instanceCount:1];
+        [firstPassEncoder setFragmentTexture:_texture2 atIndex:0];
+        [firstPassEncoder setFrontFacingWinding:MTLWindingCounterClockwise];
+        [firstPassEncoder setRenderPipelineState:_multiPassPipelineState];
+        data->iteration += data->iterationStep;
+        [firstPassEncoder setFragmentBuffer:_mandelDataBuffer offset:0 atIndex:0];
+        [_quad encode:firstPassEncoder];
+        //for(NSUInteger i = 0; i < 20; i++)
+        //{
+            [firstPassEncoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6 instanceCount:1];
+        //[firstPassEncoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6 instanceCount:1];
+        //}
     }
     [firstPassEncoder endEncoding];
+
+    if(data->iteration > data->maxIteration)
+    {
+        id<MTLBlitCommandEncoder> blit = [commandBuffer blitCommandEncoder];
+        [blit copyFromTexture:_texture2 sourceSlice:0 sourceLevel:0 sourceOrigin:{0,0,0} sourceSize:{_texture2.width, _texture2.height, 1} toTexture:_texture1 destinationSlice:0 destinationLevel:0 destinationOrigin:{0,0,0}];
+        [blit endEncoding];
+    }
+
+    NSLog(@"iteration: %d", data->iteration);
 
 
 
@@ -242,7 +261,7 @@
     [finalEncoder setFrontFacingWinding:MTLWindingCounterClockwise];
     [finalEncoder setRenderPipelineState:_finalPassPipelineState];
     [_quad encode:finalEncoder];
-    [finalEncoder setFragmentTexture:_texture2 atIndex:0];
+    [finalEncoder setFragmentTexture:_texture1 atIndex:0];
     [finalEncoder setFragmentBuffer:_colorBuffer offset:0 atIndex:0];
     [finalEncoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6 instanceCount:1];
     [finalEncoder endEncoding];

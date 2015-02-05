@@ -132,6 +132,7 @@
 
         //keep track of the time interval between draws
         _timeSinceLastDrawPreviousTime = currentTime;
+//        NSLog(@"%f", _timeSinceLastDraw);
     }
 
     //display (render)

@@ -64,13 +64,21 @@ fragment FragOutput passMultiFragment(VertexInOut inFrag [[stage_in]],
     //float2 c = inFrag._texCoord - 0.5;
 
     FragOutput test;
-    if(dot(z, z) > 4.0) //leave unchanged, but copy through
-        test.out1 = input;
-    else
+    test = last;
+    for(uint32_t i = 0; i < data[0].iterationStep; i++)
     {
-        test.out1.xy = float2(z.x * z.x - z.y*z.y, 2.0*z.x*z.y) + c;
-        test.out1.z = input.z + 1.0;
-        test.out1.w = 0.0;
+        z = test.out1.xy;
+        if(dot(z, z) > 4.0) //leave unchanged, but copy through
+        {
+            //test.out1 = input;
+            break;
+        }
+        else
+        {
+            test.out1.xy = float2(z.x * z.x - z.y*z.y, 2.0*z.x*z.y) + c;
+            test.out1.z = test.out1.z + 1.0;
+            test.out1.w = 0.0;
+        }
     }
     return test;
 }
@@ -90,7 +98,7 @@ fragment float4 passFinal(VertexInOut inFrag [[stage_in]],
     //float2 z = input.xy;
 
     if(dot(z, z) > 4.0)
-        color = newColor[0];
+        color.r = input.z / 255.0;
 
     return color;
 }
