@@ -19,6 +19,15 @@ static void CheckPipelineError(id<MTLRenderPipelineState> pipeline, NSError *err
     }
 }
 
+static void CheckPipelineError(id<MTLComputePipelineState> pipeline, NSError *error)
+{
+    if (pipeline == nil)
+    {
+        NSLog(@"Failed to create pipeline. error is %@", [error description]);
+        assert(0);
+    }
+}
+
 //Shader Loading ***************************************************************
 static id<MTLFunction> _newFunctionFromLibrary(id<MTLLibrary> library, NSString *name)
 {

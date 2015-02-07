@@ -25,13 +25,10 @@
 
     id<MTLRenderPipelineState> _finalPassPipelineState;
 
-    id<MTLRenderPipelineState> _even;
-    id<MTLRenderPipelineState> _odd;
+    id<MTLComputePipelineState> _kernel;
 
     MTLRenderPassDescriptor *_firstRenderPassDescriptor;
     MTLRenderPassDescriptor *_multiRenderPassDescriptor;
-    MTLRenderPassDescriptor *_evenPass;
-    MTLRenderPassDescriptor *_oddPass;
 
     Quad *_quad;
     MandelData _data;
@@ -48,7 +45,7 @@
     //first pass will also write to one of these
     id<MTLTexture> _texture1;
     id<MTLTexture> _texture2;
-
+    id<MTLTexture> _texture3;
 
     BOOL _changed;
 
@@ -67,7 +64,7 @@
         _data.iteration = 0;
         _data.maxIteration = 256;
         _data.iteration = 0;
-        _data.iterationStep = 20;
+        _data.iterationStep = 256;
         _color = {1.0, 0.0, 0.0, 1.0};
         _changed = YES;
     }
@@ -99,6 +96,7 @@
     id<MTLFunction> firstFragment = _newFunctionFromLibrary(_library, @"passFirstFragment");
     id<MTLFunction> multiFragment = _newFunctionFromLibrary(_library, @"passMultiFragment");
     id<MTLFunction> finalFragment = _newFunctionFromLibrary(_library, @"passFinal");
+    id<MTLFunction> mandelKernel = _newFunctionFromLibrary(_library, @"mandelKernel");
 
     MTLRenderPipelineDescriptor *firstDesc = [MTLRenderPipelineDescriptor new];
     firstDesc.depthAttachmentPixelFormat = MTLPixelFormatInvalid;
@@ -118,24 +116,6 @@
     multiDesc.fragmentFunction = multiFragment;
     multiDesc.label = @"Multi Pass";
 
-    MTLRenderPipelineDescriptor *evenDesc = [MTLRenderPipelineDescriptor new];
-    evenDesc.depthAttachmentPixelFormat = MTLPixelFormatInvalid;
-    evenDesc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
-    evenDesc.sampleCount = 1;
-    evenDesc.colorAttachments[0].pixelFormat = MTLPixelFormatRGBA32Float;
-    evenDesc.vertexFunction = vertexFunction;
-    evenDesc.fragmentFunction = multiFragment;
-    evenDesc.label = @"Multi Pass";
-
-    MTLRenderPipelineDescriptor *oddDesc = [MTLRenderPipelineDescriptor new];
-    oddDesc.depthAttachmentPixelFormat = MTLPixelFormatInvalid;
-    oddDesc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
-    oddDesc.sampleCount = 1;
-    oddDesc.colorAttachments[0].pixelFormat = MTLPixelFormatRGBA32Float;
-    oddDesc.vertexFunction = vertexFunction;
-    oddDesc.fragmentFunction = multiFragment;
-    oddDesc.label = @"Multi Pass";
-
     MTLRenderPipelineDescriptor *finalDesc = [MTLRenderPipelineDescriptor new];
     finalDesc.depthAttachmentPixelFormat = view.depthPielFormat;
     finalDesc.stencilAttachmentPixelFormat = view.stencilPixelFormat;
@@ -153,14 +133,11 @@
     _multiPassPipelineState = [_device newRenderPipelineStateWithDescriptor:multiDesc error:&error];
     CheckPipelineError(_multiPassPipelineState, error);
 
-    _even = [_device newRenderPipelineStateWithDescriptor:evenDesc error:&error];
-    CheckPipelineError(_even, error);
-
-    _odd = [_device newRenderPipelineStateWithDescriptor:oddDesc error:&error];
-    CheckPipelineError(_odd, error);
-
     _finalPassPipelineState = [_device newRenderPipelineStateWithDescriptor:finalDesc error:&error];
     CheckPipelineError(_finalPassPipelineState, error);
+
+    _kernel = [_device newComputePipelineStateWithFunction:mandelKernel error:&error];
+    CheckPipelineError(_kernel, error);
 
     
 
@@ -182,15 +159,8 @@
     _multiRenderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionLoad;
     _multiRenderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
 
-    _oddPass.colorAttachments[0].texture = _texture1;
-    _oddPass.colorAttachments[0].loadAction = MTLLoadActionLoad;
-    _oddPass.colorAttachments[0].storeAction = MTLStoreActionStore;
-
-    _evenPass.colorAttachments[0].texture = _texture2;
-    _evenPass.colorAttachments[0].loadAction = MTLLoadActionLoad;
-    _evenPass.colorAttachments[0].storeAction = MTLStoreActionStore;
-
-
+    desc.pixelFormat = MTLPixelFormatRGBA32Float;
+    _texture3 = [_device newTextureWithDescriptor:desc];
     return YES;
 }
 
@@ -212,47 +182,30 @@
         [firstPassEncoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6 instanceCount:1];
         //[firstPassEncoder endEncoding];
         [firstPassEncoder popDebugGroup];
-        _changed = NO;
-    }
-    if(data->iteration < data->maxIteration)
-    {
+        //_changed = NO;
+
         [firstPassEncoder setFragmentTexture:_texture2 atIndex:0];
         [firstPassEncoder setFrontFacingWinding:MTLWindingCounterClockwise];
         [firstPassEncoder setRenderPipelineState:_multiPassPipelineState];
         data->iteration += data->iterationStep;
         [firstPassEncoder setFragmentBuffer:_mandelDataBuffer offset:0 atIndex:0];
         [_quad encode:firstPassEncoder];
-        //for(NSUInteger i = 0; i < 20; i++)
-        //{
-            [firstPassEncoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6 instanceCount:1];
-        //[firstPassEncoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6 instanceCount:1];
-        //}
+        [firstPassEncoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6 instanceCount:1];
     }
     [firstPassEncoder endEncoding];
-
-    if(data->iteration > data->maxIteration)
+    id<MTLComputeCommandEncoder> computeEncoder = [commandBuffer computeCommandEncoder];
+    if(_changed)
     {
-        id<MTLBlitCommandEncoder> blit = [commandBuffer blitCommandEncoder];
-        [blit copyFromTexture:_texture2 sourceSlice:0 sourceLevel:0 sourceOrigin:{0,0,0} sourceSize:{_texture2.width, _texture2.height, 1} toTexture:_texture1 destinationSlice:0 destinationLevel:0 destinationOrigin:{0,0,0}];
-        [blit endEncoding];
+        [computeEncoder setComputePipelineState:_kernel];
+        [computeEncoder setTexture:_texture2 atIndex:0];
+        [computeEncoder setTexture:_texture3 atIndex:1];
+        MTLSize threadsPerGroup = {1, 1, 1};
+        MTLSize numThreadGroups = {_texture2.width/threadsPerGroup.width, _texture2.height/threadsPerGroup.height, 1};
+        [computeEncoder dispatchThreadgroups:numThreadGroups threadsPerThreadgroup:threadsPerGroup];
+        _changed = NO;
     }
+    [computeEncoder endEncoding];
 
-    NSLog(@"iteration: %d", data->iteration);
-
-
-
-//    id<MTLRenderCommandEncoder> multiPassEncoder;
-//    multiPassEncoder = [commandBuffer renderCommandEncoderWithDescriptor:_multiRenderPassDescriptor];
-//    [multiPassEncoder setFragmentTexture:_texture2 atIndex:0];
-//    [multiPassEncoder setFrontFacingWinding:MTLWindingCounterClockwise];
-//    [multiPassEncoder setRenderPipelineState:_multiPassPipelineState];
-//    [multiPassEncoder setFragmentBuffer:_mandelDataBuffer offset:0 atIndex:0];
-//    [_quad encode:multiPassEncoder];
-//    for(NSUInteger i = 0; i < _maxIterations; i++)
-//    {
-//        [multiPassEncoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6 instanceCount:1];
-//    }
-//    [multiPassEncoder endEncoding];
 }
 
 - (void)encodeFinal:(id<MTLRenderCommandEncoder>)finalEncoder
@@ -261,7 +214,7 @@
     [finalEncoder setFrontFacingWinding:MTLWindingCounterClockwise];
     [finalEncoder setRenderPipelineState:_finalPassPipelineState];
     [_quad encode:finalEncoder];
-    [finalEncoder setFragmentTexture:_texture1 atIndex:0];
+    [finalEncoder setFragmentTexture:_texture3 atIndex:0];
     [finalEncoder setFragmentBuffer:_colorBuffer offset:0 atIndex:0];
     [finalEncoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6 instanceCount:1];
     [finalEncoder endEncoding];

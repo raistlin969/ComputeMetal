@@ -65,6 +65,15 @@ fragment FragOutput passMultiFragment(VertexInOut inFrag [[stage_in]],
 
     FragOutput test;
     test = last;
+
+//    float q = ((c.x - 0.25) * (c.x - 0.25)) + (c.y*c.y);
+//    float qq = q * (q + (c.x - 0.25));
+//    if(qq < 0.25 * (c.y*c.y))
+//        return test;
+//
+//    if(((c.x + 1.0) * (c.x + 1.0)) + (c.y*c.y) < 1.0/16.0)
+//        return test;
+
     for(uint32_t i = 0; i < data[0].iterationStep; i++)
     {
         z = test.out1.xy;
@@ -85,8 +94,7 @@ fragment FragOutput passMultiFragment(VertexInOut inFrag [[stage_in]],
 
 fragment float4 passFinal(VertexInOut inFrag [[stage_in]],
                           constant float4 *newColor [[buffer(0)]],
-                          texture2d<float> previous [[texture(0)]],
-                          FragOutput last)
+                          texture2d<float> previous [[texture(0)]])
 {
     float4 color = float4(0.0, 0.0, 0.0, 1.0);
     constexpr sampler quad_sampler;
@@ -98,12 +106,36 @@ fragment float4 passFinal(VertexInOut inFrag [[stage_in]],
     //float2 z = input.xy;
 
     if(dot(z, z) > 4.0)
+    {
         color.r = input.z / 255.0;
-
+        //color.g = 0.6;
+    }
     return color;
 }
 
-
+kernel void mandelKernel(texture2d<float, access::read> inTexture [[texture(0)]],
+                         texture2d<float, access::write> outTexture [[texture(1)]],
+                         uint2 gid [[thread_position_in_grid]])
+{
+    float4 input = inTexture.read(gid);
+    float2 z = input.xy;
+    float2 c = input.zw;
+    float2 out = float2(0.0, 0.0);
+    float it = 0.0;
+    for(uint32_t i = 0; i < 256; i++)
+    {
+        if(dot(z, z) > 4.0) //leave unchanged, but copy through
+        {
+            break;
+        }
+        else
+        {
+            out.xy = float2(z.x * z.x - z.y*z.y, 2.0*z.x*z.y) + c;
+        }
+        it = (float)i;
+    }
+    outTexture.write(float4(out, it, 0.0), gid);
+}
 
 
 
