@@ -38,7 +38,7 @@ fragment FragOutput passFirstFragment(VertexInOut inFrag [[stage_in]], constant 
 
     float2 c = (inFrag._texCoord - 0.5) * zoom * float2(1, aspect) - pan;
     //float2 c = inFrag._texCoord - 0.5;
-    out.out1 = float4(c, 0.0, 0.0);
+    out.out1 = float4(c, c);
     //out.out2 = c;
     return out;
 }
@@ -101,7 +101,7 @@ fragment float4 passFinal(VertexInOut inFrag [[stage_in]],
 
     float4 input = previous.sample(quad_sampler, inFrag._texCoord);
     float2 z = input.xy;
-
+//    color = input;
     //float4 input = last.out1;
     //float2 z = input.xy;
 
@@ -122,19 +122,21 @@ kernel void mandelKernel(texture2d<float, access::read> inTexture [[texture(0)]]
     float2 c = input.zw;
     float2 out = float2(0.0, 0.0);
     float it = 0.0;
+    float4 color = float4(0.0, 0.0, 0.0, 1.0);
     for(uint32_t i = 0; i < 256; i++)
     {
         if(dot(z, z) > 4.0) //leave unchanged, but copy through
         {
+            color.r = i / 255.0;
             break;
         }
         else
         {
-            out.xy = float2(z.x * z.x - z.y*z.y, 2.0*z.x*z.y) + c;
+            z = float2(z.x * z.x - z.y*z.y, 2.0*z.x*z.y) + c;
         }
         it = (float)i;
     }
-    outTexture.write(float4(out, it, 0.0), gid);
+    outTexture.write(color, gid);
 }
 
 

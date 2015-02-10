@@ -78,8 +78,8 @@
     int ww = w * scale;
     int h = [UIScreen mainScreen].bounds.size.height;
     int hh = h * scale;
-    _size.width = ww;//[UIScreen mainScreen].nativeBounds.size.width;
-    _size.height = hh;//[UIScreen mainScreen].nativeBounds.size.height;
+    _size.width = 256;//ww;//[UIScreen mainScreen].nativeBounds.size.width;
+    _size.height = 256;//hh;//[UIScreen mainScreen].nativeBounds.size.height;
 
     _quad = [[Quad alloc] initWithDevice:_device];
     if(!_quad)
@@ -159,7 +159,6 @@
     _multiRenderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionLoad;
     _multiRenderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
 
-    desc.pixelFormat = MTLPixelFormatRGBA32Float;
     _texture3 = [_device newTextureWithDescriptor:desc];
     return YES;
 }
@@ -193,18 +192,22 @@
         [firstPassEncoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6 instanceCount:1];
     }
     [firstPassEncoder endEncoding];
-    id<MTLComputeCommandEncoder> computeEncoder = [commandBuffer computeCommandEncoder];
-    if(_changed)
-    {
-        [computeEncoder setComputePipelineState:_kernel];
-        [computeEncoder setTexture:_texture2 atIndex:0];
-        [computeEncoder setTexture:_texture3 atIndex:1];
-        MTLSize threadsPerGroup = {1, 1, 1};
-        MTLSize numThreadGroups = {_texture2.width/threadsPerGroup.width, _texture2.height/threadsPerGroup.height, 1};
-        [computeEncoder dispatchThreadgroups:numThreadGroups threadsPerThreadgroup:threadsPerGroup];
-        _changed = NO;
-    }
-    [computeEncoder endEncoding];
+
+    id<MTLBlitCommandEncoder> blit = [commandBuffer blitCommandEncoder];
+    [blit copyFromTexture:_texture2 sourceSlice:0 sourceLevel:0 sourceOrigin:{50, 0, 0} sourceSize:{206, 256, 1} toTexture:_texture2 destinationSlice:0 destinationLevel:0 destinationOrigin:{0, 0, 0}];
+    [blit endEncoding];
+//    id<MTLComputeCommandEncoder> computeEncoder = [commandBuffer computeCommandEncoder];
+//    if(_changed)
+//    {
+//        [computeEncoder setComputePipelineState:_kernel];
+//        [computeEncoder setTexture:_texture2 atIndex:0];
+//        [computeEncoder setTexture:_texture3 atIndex:1];
+//        MTLSize threadsPerGroup = {1, 1, 1};
+//        MTLSize numThreadGroups = {_texture2.width/threadsPerGroup.width, _texture2.height/threadsPerGroup.height, 1};
+//        [computeEncoder dispatchThreadgroups:numThreadGroups threadsPerThreadgroup:threadsPerGroup];
+//        _changed = NO;
+//    }
+//    [computeEncoder endEncoding];
 
 }
 
@@ -214,7 +217,7 @@
     [finalEncoder setFrontFacingWinding:MTLWindingCounterClockwise];
     [finalEncoder setRenderPipelineState:_finalPassPipelineState];
     [_quad encode:finalEncoder];
-    [finalEncoder setFragmentTexture:_texture3 atIndex:0];
+    [finalEncoder setFragmentTexture:_texture2 atIndex:0];
     [finalEncoder setFragmentBuffer:_colorBuffer offset:0 atIndex:0];
     [finalEncoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6 instanceCount:1];
     [finalEncoder endEncoding];
