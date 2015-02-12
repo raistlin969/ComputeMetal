@@ -28,6 +28,72 @@ vertex VertexInOut passThroughVertex(constant float4 *position [[buffer(0)]],
     return out;
 }
 
+fragment float4 generateZFragment(VertexInOut inFrag [[stage_in]], constant MandelData *data [[buffer(0)]])
+{
+    float2 pan = data[0].pan;
+    float zoom = data[0].zoom;
+    float aspect = data[0].aspect;
+
+    float2 c = (inFrag._texCoord - 0.5) * zoom * float2(1, aspect) - pan;
+
+    return float4(c, 0.0, 0.0);
+}
+
+fragment float4 lowResolutionFragment(VertexInOut inFrag [[stage_in]],
+                                      constant MandelData *data [[buffer(0)]])
+{
+    float2 pan = data[0].pan;
+    float zoom = data[0].zoom;
+    float aspect = data[0].aspect;
+
+    float2 z = (inFrag._texCoord - 0.5) * zoom * float2(1, aspect) - pan;
+    float2 c = z;
+
+    float4 out = float4(0.0, 0.0, 0.0, 0.0);
+
+    for(uint32_t i = 0; i < 256; i++)
+    {
+        z = out.xy;
+        if(dot(z, z) > 4.0) //leave unchanged, but copy through
+        {
+            break;
+        }
+        else
+        {
+            out.xy = float2(z.x * z.x - z.y*z.y, 2.0*z.x*z.y) + c;
+            out.z = out.z + 1.0;
+            out.w = 0.0;
+        }
+    }
+    return out;
+}
+
+fragment float4 highResolutionFragment(VertexInOut inFrag [[stage_in]],
+                                      constant MandelData *data [[buffer(0)]],
+                                       float4 previous [[color(0)]])
+{
+    float2 pan = data[0].pan;
+    float zoom = data[0].zoom;
+    float aspect = data[0].aspect;
+
+    float2 c = (inFrag._texCoord - 0.5) * zoom * float2(1, aspect) - pan;
+    float2 z = previous.xy;
+
+    float4 out = float4(0.0, 0.0, 0.0, 0.0);
+
+    if(dot(z, z) > 4.0) //leave unchanged, but copy through
+    {
+        out = previous;
+    }
+    else
+    {
+        out.xy = float2(z.x * z.x - z.y*z.y, 2.0*z.x*z.y) + c;
+        out.z = previous.z + 1.0;
+        out.w = 0.0;
+    }
+    return out;
+}
+
 fragment FragOutput passFirstFragment(VertexInOut inFrag [[stage_in]], constant MandelData *data [[buffer(0)]])
 {
     float2 pan = data[0].pan;
