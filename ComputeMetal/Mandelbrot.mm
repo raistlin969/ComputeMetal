@@ -19,16 +19,11 @@
     __weak id<MTLDevice> _device;
     __weak id<MTLLibrary> _library;
 
-    id<MTLRenderPipelineState> _firstPassPipelineState;
-
-    id<MTLRenderPipelineState> _multiPassPipelineState;
-
+    id<MTLCommandQueue> _queue;
+    
     id<MTLRenderPipelineState> _finalPassPipelineState;
 
-    id<MTLComputePipelineState> _kernel;
-
-    MTLRenderPassDescriptor *_firstRenderPassDescriptor;
-    MTLRenderPassDescriptor *_multiRenderPassDescriptor;
+//    id<MTLComputePipelineState> _kernel;
 
     Quad *_quad;
     MandelData _data;
@@ -40,12 +35,10 @@
     id<MTLBuffer> _mandelDataBuffer;
     id<MTLBuffer> _colorBuffer;
 
-
-    //these two textures are used to ping pong back and forth for the iterations
-    //first pass will also write to one of these
-    id<MTLTexture> _texture1;
-    id<MTLTexture> _texture2;
-    id<MTLTexture> _texture3;
+    id<MTLTexture> _original;
+//    id<MTLTexture> _texture1;
+//    id<MTLTexture> _texture2;
+//    id<MTLTexture> _texture3;
 
     BOOL _changed;
 
@@ -61,6 +54,8 @@
     MTLRenderPassDescriptor *_lowResPass;
     MTLRenderPassDescriptor *_generateHighResZPass;
     MTLRenderPassDescriptor *_highResFrameIterationPass;
+
+    MTLRenderPassDescriptor *_generateC;
 
     BOOL _highResReady;
     int _iteration;
@@ -84,6 +79,7 @@
         _changed = YES;
         _highResReady = NO;
         _iteration = 0;
+        _queue = [_device newCommandQueue];
     }
     return self;
 }
@@ -110,32 +106,12 @@
     _mandelDataBuffer = [_device newBufferWithBytes:&_data length:sizeof(MandelData) options:0];
 
     id<MTLFunction> vertexFunction = _newFunctionFromLibrary(_library, @"passThroughVertex");
-    id<MTLFunction> firstFragment = _newFunctionFromLibrary(_library, @"passFirstFragment");
-    id<MTLFunction> multiFragment = _newFunctionFromLibrary(_library, @"passMultiFragment");
     id<MTLFunction> finalFragment = _newFunctionFromLibrary(_library, @"passFinal");
     id<MTLFunction> mandelKernel = _newFunctionFromLibrary(_library, @"mandelKernel");
 
     id<MTLFunction> lowResolutionFragment = _newFunctionFromLibrary(_library, @"lowResolutionFragment");
     id<MTLFunction> highResolutionFragment = _newFunctionFromLibrary(_library, @"highResolutionFragment");
     id<MTLFunction> generateCFragment = _newFunctionFromLibrary(_library, @"generateZFragment");
-
-    MTLRenderPipelineDescriptor *firstDesc = [MTLRenderPipelineDescriptor new];
-    firstDesc.depthAttachmentPixelFormat = MTLPixelFormatInvalid;
-    firstDesc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
-    firstDesc.sampleCount = 1;
-    firstDesc.colorAttachments[0].pixelFormat = MTLPixelFormatRGBA32Float;
-    firstDesc.vertexFunction = vertexFunction;
-    firstDesc.fragmentFunction = firstFragment;
-    firstDesc.label = @"First Pass";
-
-    MTLRenderPipelineDescriptor *multiDesc = [MTLRenderPipelineDescriptor new];
-    multiDesc.depthAttachmentPixelFormat = MTLPixelFormatInvalid;
-    multiDesc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
-    multiDesc.sampleCount = 1;
-    multiDesc.colorAttachments[0].pixelFormat = MTLPixelFormatRGBA32Float;
-    multiDesc.vertexFunction = vertexFunction;
-    multiDesc.fragmentFunction = multiFragment;
-    multiDesc.label = @"Multi Pass";
 
     MTLRenderPipelineDescriptor *finalDesc = [MTLRenderPipelineDescriptor new];
     finalDesc.depthAttachmentPixelFormat = view.depthPielFormat;
@@ -175,12 +151,6 @@
 
     NSError *error = nil;
 
-    _firstPassPipelineState = [_device newRenderPipelineStateWithDescriptor:firstDesc error:&error];
-    CheckPipelineError(_firstPassPipelineState, error);
-
-    _multiPassPipelineState = [_device newRenderPipelineStateWithDescriptor:multiDesc error:&error];
-    CheckPipelineError(_multiPassPipelineState, error);
-
     _finalPassPipelineState = [_device newRenderPipelineStateWithDescriptor:finalDesc error:&error];
     CheckPipelineError(_finalPassPipelineState, error);
 
@@ -193,16 +163,12 @@
     _frameIteration = [_device newRenderPipelineStateWithDescriptor:highDesc error:&error];
     CheckPipelineError(_frameIteration, error);
 
-    _kernel = [_device newComputePipelineStateWithFunction:mandelKernel error:&error];
-    CheckPipelineError(_kernel, error);
+//    _kernel = [_device newComputePipelineStateWithFunction:mandelKernel error:&error];
+//    CheckPipelineError(_kernel, error);
 
     
 
     MTLTextureDescriptor *desc = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA32Float width:_size.width height:_size.height mipmapped:NO];
-
-    _texture1 = [_device newTextureWithDescriptor:desc];
-    _texture2 = [_device newTextureWithDescriptor:desc];
-
 
     desc = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA32Float width:512 height:512 mipmapped:NO];
     _lowResolutionOutput = [_device newTextureWithDescriptor:desc];
@@ -211,10 +177,6 @@
     _highResolutionZ = [_device newTextureWithDescriptor:desc];
     _highResolutionOutput = [_device newTextureWithDescriptor:desc];
 
-    if(_firstRenderPassDescriptor == nil)
-        _firstRenderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
-    if(_multiRenderPassDescriptor == nil)
-        _multiRenderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
 
     if(_lowResPass == nil)
         _lowResPass = [MTLRenderPassDescriptor renderPassDescriptor];
@@ -223,13 +185,9 @@
     if(_highResFrameIterationPass == nil)
         _highResFrameIterationPass = [MTLRenderPassDescriptor renderPassDescriptor];
 
-    _firstRenderPassDescriptor.colorAttachments[0].texture = _texture2;
-    _firstRenderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionLoad;
-    _firstRenderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
+    if(_generateC == nil)
+        _generateC = [MTLRenderPassDescriptor renderPassDescriptor];
 
-    _multiRenderPassDescriptor.colorAttachments[0].texture = _texture2;
-    _multiRenderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionLoad;
-    _multiRenderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
 
     _lowResPass.colorAttachments[0].texture = _lowResolutionOutput;
     _lowResPass.colorAttachments[0].loadAction = MTLLoadActionDontCare;
@@ -243,87 +201,44 @@
     _highResFrameIterationPass.colorAttachments[0].loadAction = MTLLoadActionLoad;
     _highResFrameIterationPass.colorAttachments[0].storeAction = MTLStoreActionStore;
 
-    _texture3 = [_device newTextureWithDescriptor:desc];
+
+    desc = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA32Float width:2048 height:2048 mipmapped:NO];
+    _original = [_device newTextureWithDescriptor:desc];
+
+    _generateC.colorAttachments[0].texture = _original;
+    _generateC.colorAttachments[0].loadAction = MTLLoadActionDontCare;
+    _generateC.colorAttachments[0].storeAction = MTLStoreActionStore;
+
     return YES;
 }
 
-- (void)encode:(id<MTLCommandBuffer>)commandBuffer
+- (void)encode
 {
-    if(_changed)
-    {
-        id<MTLRenderCommandEncoder> lowRes = [commandBuffer renderCommandEncoderWithDescriptor:_lowResPass];
-        [lowRes setFrontFacingWinding:MTLWindingCounterClockwise];
-        [lowRes setRenderPipelineState:_fullIteration];
-        [lowRes setFragmentBuffer:_mandelDataBuffer offset:0 atIndex:0];
+    id<MTLCommandBuffer> commandBuffer = [_queue commandBuffer];
+    id<MTLRenderCommandEncoder> orig = [commandBuffer renderCommandEncoderWithDescriptor:_generateC];
+    [orig setFrontFacingWinding:MTLWindingCounterClockwise];
+    [orig setRenderPipelineState:_calculateZ];
+    [orig setFragmentBuffer:_mandelDataBuffer offset:0 atIndex:0];
 
-        [_quad encode:lowRes];
+    [_quad encode:orig];
 
-        [lowRes drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
-        [lowRes endEncoding];
+    [orig drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+    [orig endEncoding];
 
-        id<MTLRenderCommandEncoder> highRes = [commandBuffer renderCommandEncoderWithDescriptor:_generateHighResZPass];
-        [highRes setFrontFacingWinding:MTLWindingCounterClockwise];
-        [highRes setRenderPipelineState:_calculateZ];
-        [highRes setFragmentBuffer:_mandelDataBuffer offset:0 atIndex:0];
-
-        [_quad encode:highRes];
-
-        [highRes drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
-        [highRes endEncoding];
-        _highResReady = NO;
-        _iteration = 0;
-        _changed = NO;
-    }
-    else
-    {
-        id<MTLRenderCommandEncoder> highRes = [commandBuffer renderCommandEncoderWithDescriptor:_highResFrameIterationPass];
-        [highRes setFrontFacingWinding:MTLWindingCounterClockwise];
-        [highRes setRenderPipelineState:_frameIteration];
-        [highRes setFragmentBuffer:_mandelDataBuffer offset:0 atIndex:0];
-        [highRes setFragmentTexture:_highResolutionOutput atIndex:0];
-
-        [_quad encode:highRes];
-
-        for(int i = 0; i < 20; i++)
-        {
-            [highRes drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
-        }
-        [highRes endEncoding];
-        _iteration+=20;
-        if(_iteration > 256)
-            _highResReady = YES;
-    }
-
-
-
-
-//    id<MTLRenderCommandEncoder> firstPassEncoder = [commandBuffer renderCommandEncoderWithDescriptor:_firstRenderPassDescriptor];
+//    id<MTLCommandBuffer> commandBuffer = [_queue commandBuffer];
 //
-//    if(_changed)
-//    {
-//        data->iteration = 0;
-//        [firstPassEncoder pushDebugGroup:@"First Pass"];
-//        [firstPassEncoder setFrontFacingWinding:MTLWindingCounterClockwise];
-//        [firstPassEncoder setRenderPipelineState:_firstPassPipelineState];
-//        [firstPassEncoder setFragmentBuffer:_mandelDataBuffer offset:0 atIndex:0];
 //
-//        [_quad encode:firstPassEncoder];
+//    id<MTLRenderCommandEncoder> highRes = [commandBuffer renderCommandEncoderWithDescriptor:_generateHighResZPass];
+//    [highRes setFrontFacingWinding:MTLWindingCounterClockwise];
+//    [highRes setRenderPipelineState:_fullIteration];
+//    [highRes setFragmentBuffer:_mandelDataBuffer offset:0 atIndex:0];
 //
-//        [firstPassEncoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6 instanceCount:1];
-//        //[firstPassEncoder endEncoding];
-//        [firstPassEncoder popDebugGroup];
-//        //_changed = NO;
+//    [_quad encode:highRes];
 //
-//        [firstPassEncoder setFragmentTexture:_texture2 atIndex:0];
-//        [firstPassEncoder setFrontFacingWinding:MTLWindingCounterClockwise];
-//        [firstPassEncoder setRenderPipelineState:_multiPassPipelineState];
-//        data->iteration += data->iterationStep;
-//        [firstPassEncoder setFragmentBuffer:_mandelDataBuffer offset:0 atIndex:0];
-//        [_quad encode:firstPassEncoder];
-//        [firstPassEncoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6 instanceCount:1];
-//    }
-//    [firstPassEncoder endEncoding];
-
+//    [highRes drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+//    [highRes endEncoding];
+//
+//    [commandBuffer commit];
 }
 
 - (void)encodeFinal:(id<MTLRenderCommandEncoder>)finalEncoder
@@ -332,10 +247,10 @@
     [finalEncoder setFrontFacingWinding:MTLWindingCounterClockwise];
     [finalEncoder setRenderPipelineState:_finalPassPipelineState];
     [_quad encode:finalEncoder];
-    if(_highResReady)
+//    if(_highResReady)
         [finalEncoder setFragmentTexture:_highResolutionOutput atIndex:0];
-    else
-        [finalEncoder setFragmentTexture:_lowResolutionOutput atIndex:0];
+//    else
+//        [finalEncoder setFragmentTexture:_lowResolutionOutput atIndex:0];
 
     [finalEncoder setFragmentBuffer:_colorBuffer offset:0 atIndex:0];
     [finalEncoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];

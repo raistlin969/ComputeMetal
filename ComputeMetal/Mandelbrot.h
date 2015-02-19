@@ -15,7 +15,7 @@
 
 - (instancetype)initWithDevice:(id<MTLDevice>)device Library:(id<MTLLibrary>)library;
 - (BOOL)configure:(MetalView *)view;
-- (void)encode:(id<MTLCommandBuffer>)commandBuffer;
+- (void)encode;
 - (void)encodeFinal:(id<MTLRenderCommandEncoder>)finalEncoder;
 - (void)reshape:(MetalView *)view;
 

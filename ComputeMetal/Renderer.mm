@@ -417,7 +417,7 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
     //compute
 //    [self compute:commandBuffer];
 
-    [_mandelbrot encode:commandBuffer];
+//    [_mandelbrot encode];
     
     //create a render command encoder so we can render into something
     MTLRenderPassDescriptor *renderPassDescriptor = view.renderPassDescriptor;
@@ -468,12 +468,20 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
     {
         [_mandelbrot panX:view.panX Y:view.panY];
         view.panNeeded = NO;
+        dispatch_queue_t encode = dispatch_queue_create("encode", NULL);
+        dispatch_async(encode, ^{
+            [_mandelbrot encode];
+        });
     }
 
     if(view.zoomNeeded)
     {
         [_mandelbrot zoom:view.zoom];
         view.zoomNeeded = NO;
+        dispatch_queue_t encode = dispatch_queue_create("encode", NULL);
+        dispatch_async(encode, ^{
+            [_mandelbrot encode];
+        });
     }
 }
 
