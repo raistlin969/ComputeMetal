@@ -189,23 +189,25 @@ fragment FragOutput passMultiFragment(VertexInOut inFrag [[stage_in]],
 
 fragment float4 passFinal(VertexInOut inFrag [[stage_in]],
                           constant float4 *newColor [[buffer(0)]],
-                          texture2d<float> previous [[texture(0)]])
+                          texture2d<float> previous [[texture(0)]],
+                          float4 pos [[position]])
 {
     float4 color = float4(0.0, 0.0, 0.0, 1.0);
     constexpr sampler quad_sampler;
 
-    float4 input = previous.sample(quad_sampler, inFrag._texCoord);
-    float2 z = input.xy;
-//    color = input;
-    //float4 input = last.out1;
-    //float2 z = input.xy;
-
-    if(dot(z, z) > 4.0)
-    {
-        color.r = input.z / 255.0;
-        //color.g = 0.6;
-    }
-    return color;
+    uint4 p = uint4(pos);
+    float4 input = previous.read(p.xy);// previous.sample(quad_sampler, inFrag._texCoord);
+//    float2 z = input.xy;
+////    color = input;
+//    //float4 input = last.out1;
+//    //float2 z = input.xy;
+//
+//    if(dot(z, z) > 4.0)
+//    {
+//        color.r = input.z / 255.0;
+//        //color.g = 0.6;
+//    }
+    return input;
 }
 
 kernel void mandelKernel(texture2d<float, access::read> inTexture [[texture(0)]],
@@ -234,7 +236,20 @@ kernel void mandelKernel(texture2d<float, access::read> inTexture [[texture(0)]]
     outTexture.write(color, gid);
 }
 
-
+kernel void test(texture2d<float, access::write> outTexture [[texture(0)]],
+                 uint2 gid [[thread_position_in_grid]],
+                 uint2 tpgr [[threads_per_threadgroup]],
+                 uint2 tptg [[thread_position_in_threadgroup]])
+{
+    float r = 0.0;
+//    float g = tptg.y / (float)tpgr.y;
+    if(tptg.x == 0 || tptg.x == 127 || tptg.y == 0 || tptg.y == 127)
+        r = 1.0;
+    if(gid.x == 0 || gid.x == 127 || gid.y == 0 || gid.y == 127)
+        r = 1.0;
+    float4 color = float4(r, 0.0, 0.0, 1.0);
+    outTexture.write(color, gid);
+}
 
 
 

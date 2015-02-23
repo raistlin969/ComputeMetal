@@ -23,7 +23,7 @@
     
     id<MTLRenderPipelineState> _finalPassPipelineState;
 
-//    id<MTLComputePipelineState> _kernel;
+    id<MTLComputePipelineState> _kernel;
 
     Quad *_quad;
     MandelData _data;
@@ -107,7 +107,7 @@
 
     id<MTLFunction> vertexFunction = _newFunctionFromLibrary(_library, @"passThroughVertex");
     id<MTLFunction> finalFragment = _newFunctionFromLibrary(_library, @"passFinal");
-    id<MTLFunction> mandelKernel = _newFunctionFromLibrary(_library, @"mandelKernel");
+    id<MTLFunction> mandelKernel = _newFunctionFromLibrary(_library, @"test");
 
     id<MTLFunction> lowResolutionFragment = _newFunctionFromLibrary(_library, @"lowResolutionFragment");
     id<MTLFunction> highResolutionFragment = _newFunctionFromLibrary(_library, @"highResolutionFragment");
@@ -163,17 +163,17 @@
     _frameIteration = [_device newRenderPipelineStateWithDescriptor:highDesc error:&error];
     CheckPipelineError(_frameIteration, error);
 
-//    _kernel = [_device newComputePipelineStateWithFunction:mandelKernel error:&error];
-//    CheckPipelineError(_kernel, error);
+    _kernel = [_device newComputePipelineStateWithFunction:mandelKernel error:&error];
+    CheckPipelineError(_kernel, error);
 
     
 
     MTLTextureDescriptor *desc = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA32Float width:_size.width height:_size.height mipmapped:NO];
 
-    desc = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA32Float width:512 height:512 mipmapped:NO];
+    desc = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA32Float width:1024 height:1024 mipmapped:NO];
     _lowResolutionOutput = [_device newTextureWithDescriptor:desc];
 
-    desc = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA32Float width:1024 height:1024 mipmapped:NO];
+    desc = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA16Float width:1024 height:1024 mipmapped:NO];
     _highResolutionZ = [_device newTextureWithDescriptor:desc];
     _highResolutionOutput = [_device newTextureWithDescriptor:desc];
 
@@ -215,15 +215,25 @@
 - (void)encode
 {
     id<MTLCommandBuffer> commandBuffer = [_queue commandBuffer];
-    id<MTLRenderCommandEncoder> orig = [commandBuffer renderCommandEncoderWithDescriptor:_generateC];
-    [orig setFrontFacingWinding:MTLWindingCounterClockwise];
-    [orig setRenderPipelineState:_calculateZ];
-    [orig setFragmentBuffer:_mandelDataBuffer offset:0 atIndex:0];
-
-    [_quad encode:orig];
-
-    [orig drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
-    [orig endEncoding];
+    id<MTLComputeCommandEncoder> compute = [commandBuffer computeCommandEncoder];
+    [compute pushDebugGroup:@"compute"];
+    [compute setComputePipelineState:_kernel];
+    [compute setTexture:_highResolutionOutput atIndex:0];
+    //[compute setTexture:_lowResolutionOutput atIndex:1];
+    MTLSize numThreadGroups = {4, 4, 1};
+    MTLSize threadPerGroup = {128, 128, 1};
+    [compute dispatchThreadgroups:numThreadGroups threadsPerThreadgroup:threadPerGroup];
+    [compute endEncoding];
+    [compute popDebugGroup];
+//    id<MTLRenderCommandEncoder> orig = [commandBuffer renderCommandEncoderWithDescriptor:_generateC];
+//    [orig setFrontFacingWinding:MTLWindingCounterClockwise];
+//    [orig setRenderPipelineState:_calculateZ];
+//    [orig setFragmentBuffer:_mandelDataBuffer offset:0 atIndex:0];
+//
+//    [_quad encode:orig];
+//
+//    [orig drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+//    [orig endEncoding];
 
 //    id<MTLCommandBuffer> commandBuffer = [_queue commandBuffer];
 //
@@ -238,7 +248,7 @@
 //    [highRes drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
 //    [highRes endEncoding];
 //
-//    [commandBuffer commit];
+    [commandBuffer commit];
 }
 
 - (void)encodeFinal:(id<MTLRenderCommandEncoder>)finalEncoder
