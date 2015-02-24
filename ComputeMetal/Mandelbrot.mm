@@ -59,6 +59,9 @@
 
     BOOL _highResReady;
     int _iteration;
+
+    id<MTLTexture> _iterationCountTexture;
+    id<MTLBuffer> _nodes;
 }
 
 - (instancetype)initWithDevice:(id<MTLDevice>)device Library:(id<MTLLibrary>)library
@@ -105,9 +108,11 @@
 
     _mandelDataBuffer = [_device newBufferWithBytes:&_data length:sizeof(MandelData) options:0];
 
+    _nodes = [_device newBufferWithLength:sizeof(MandelNode) * 4 options:0];
+
     id<MTLFunction> vertexFunction = _newFunctionFromLibrary(_library, @"passThroughVertex");
     id<MTLFunction> finalFragment = _newFunctionFromLibrary(_library, @"passFinal");
-    id<MTLFunction> mandelKernel = _newFunctionFromLibrary(_library, @"test");
+    id<MTLFunction> mandelKernel = _newFunctionFromLibrary(_library, @"mandelKernel");
 
     id<MTLFunction> lowResolutionFragment = _newFunctionFromLibrary(_library, @"lowResolutionFragment");
     id<MTLFunction> highResolutionFragment = _newFunctionFromLibrary(_library, @"highResolutionFragment");
@@ -173,7 +178,7 @@
     desc = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA32Float width:1024 height:1024 mipmapped:NO];
     _lowResolutionOutput = [_device newTextureWithDescriptor:desc];
 
-    desc = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA16Float width:1024 height:1024 mipmapped:NO];
+    desc = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA32Float width:1024 height:1024 mipmapped:NO];
     _highResolutionZ = [_device newTextureWithDescriptor:desc];
     _highResolutionOutput = [_device newTextureWithDescriptor:desc];
 
@@ -209,19 +214,68 @@
     _generateC.colorAttachments[0].loadAction = MTLLoadActionDontCare;
     _generateC.colorAttachments[0].storeAction = MTLStoreActionStore;
 
+
+    desc = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatR16Uint width:1024 height:1024 mipmapped:NO];
+    _iterationCountTexture = [_device newTextureWithDescriptor:desc];
+
     return YES;
 }
 
 - (void)encode
 {
     id<MTLCommandBuffer> commandBuffer = [_queue commandBuffer];
+    id<MTLRenderCommandEncoder> genC = [commandBuffer renderCommandEncoderWithDescriptor:_generateHighResZPass];
+    [genC setFrontFacingWinding:MTLWindingCounterClockwise];
+    [genC setRenderPipelineState:_calculateZ];
+    [genC setFragmentBuffer:_mandelDataBuffer offset:0 atIndex:0];
+    [_quad encode:genC];
+    [genC drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
+    [genC endEncoding];
+
+    MandelNode root = MandelNode();
+    root.x = 0;
+    root.y = 0;
+    root.size = {1024, 1024};
+
+    MandelNode nw = MandelNode();
+    nw.x = 0;
+    nw.y = 0;
+    nw.size = {512, 512};
+//    root.nw = &nw;
+
+    MandelNode ne = MandelNode();
+    ne.x = 512;
+    ne.y = 0;
+    ne.size = {512, 512};
+//    root.ne = &ne;
+
+    MandelNode sw = MandelNode();
+    sw.x = 0;
+    sw.y = 512;
+    sw.size = {512, 512};
+//    root.sw = &sw;
+
+    MandelNode se = MandelNode();
+    se.x = 512;
+    se.y = 512;
+    se.size = {512, 512};
+//    root.se = &se;
+
+    MandelNode *nodes = (MandelNode*)[_nodes contents];
+    nodes[0] = nw;
+    nodes[1] = ne;
+    nodes[2] = sw;
+    nodes[3] = se;
+
     id<MTLComputeCommandEncoder> compute = [commandBuffer computeCommandEncoder];
     [compute pushDebugGroup:@"compute"];
     [compute setComputePipelineState:_kernel];
     [compute setTexture:_highResolutionOutput atIndex:0];
+    [compute setTexture:_iterationCountTexture atIndex:1];
+    [compute setBuffer:_nodes offset:0 atIndex:0];
     //[compute setTexture:_lowResolutionOutput atIndex:1];
-    MTLSize numThreadGroups = {4, 4, 1};
-    MTLSize threadPerGroup = {128, 128, 1};
+    MTLSize threadPerGroup = {16, 16, 1};
+    MTLSize numThreadGroups = {_highResolutionOutput.width/16, _highResolutionOutput.height/16, 1};
     [compute dispatchThreadgroups:numThreadGroups threadsPerThreadgroup:threadPerGroup];
     [compute endEncoding];
     [compute popDebugGroup];
@@ -258,7 +312,7 @@
     [finalEncoder setRenderPipelineState:_finalPassPipelineState];
     [_quad encode:finalEncoder];
 //    if(_highResReady)
-        [finalEncoder setFragmentTexture:_highResolutionOutput atIndex:0];
+        [finalEncoder setFragmentTexture:_iterationCountTexture atIndex:0];
 //    else
 //        [finalEncoder setFragmentTexture:_lowResolutionOutput atIndex:0];
 

@@ -417,7 +417,7 @@ static const uint32_t IN_FLIGHT_COMMAND_BUFFERS = 3;
     //compute
 //    [self compute:commandBuffer];
 
-//    [_mandelbrot encode];
+    [_mandelbrot encode];
     
     //create a render command encoder so we can render into something
     MTLRenderPassDescriptor *renderPassDescriptor = view.renderPassDescriptor;

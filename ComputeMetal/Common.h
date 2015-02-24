@@ -31,6 +31,30 @@ typedef struct
 //    float2 out2 [[color(1)]];
 } FragOutput;
 
+struct MandelNode
+{
+    uint x;
+    uint y;
+    uint2 size;
+    uint iterations;
+//    MandelNode *nw;
+//    MandelNode *ne;
+//    MandelNode *sw;
+//    MandelNode *se;
+
+    MandelNode()
+    {
+        x = 0;
+        y = 0;
+        size = 0;
+        iterations = 0;
+//        nw = 0;
+//        ne = 0;
+//        sw = 0;
+//        se = 0;
+    }
+};
+
 #endif
 
 #endif
