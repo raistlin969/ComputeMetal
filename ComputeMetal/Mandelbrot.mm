@@ -9,6 +9,7 @@
 #import "Mandelbrot.h"
 #import "Quad.h"
 #import "Utilities.h"
+#import "QuadNode.h"
 
 #import <simd/simd.h>
 
@@ -62,6 +63,8 @@
 
     id<MTLTexture> _iterationCountTexture;
     id<MTLBuffer> _nodes;
+
+    BOOL _nwDone, _neDone, _swDone, _seDone;
 }
 
 - (instancetype)initWithDevice:(id<MTLDevice>)device Library:(id<MTLLibrary>)library
@@ -83,6 +86,7 @@
         _highResReady = NO;
         _iteration = 0;
         _queue = [_device newCommandQueue];
+        _nwDone = _neDone = _swDone = _seDone = NO;
     }
     return self;
 }
@@ -223,6 +227,9 @@
 
 - (void)encode
 {
+    if(!_changed)
+        return;
+    _highResReady = NO;
     id<MTLCommandBuffer> commandBuffer = [_queue commandBuffer];
     id<MTLRenderCommandEncoder> genC = [commandBuffer renderCommandEncoderWithDescriptor:_generateHighResZPass];
     [genC setFrontFacingWinding:MTLWindingCounterClockwise];
@@ -232,53 +239,25 @@
     [genC drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6];
     [genC endEncoding];
 
-    MandelNode root = MandelNode();
-    root.x = 0;
-    root.y = 0;
-    root.size = {1024, 1024};
+    [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer>) {
+        [self someFunc];
+        _changed = NO;
+    }];
 
-    MandelNode nw = MandelNode();
-    nw.x = 0;
-    nw.y = 0;
-    nw.size = {512, 512};
-//    root.nw = &nw;
+//    id<MTLComputeCommandEncoder> compute = [commandBuffer computeCommandEncoder];
+//    [compute pushDebugGroup:@"compute"];
+//    [compute setComputePipelineState:_kernel];
+//    [compute setTexture:_highResolutionOutput atIndex:0];
+//    [compute setTexture:_iterationCountTexture atIndex:1];
+//    [compute setBuffer:_nodes offset:0 atIndex:0];
+//    //[compute setTexture:_lowResolutionOutput atIndex:1];
+//    MTLSize threadPerGroup = {16, 16, 1};
+//    MTLSize numThreadGroups = {_highResolutionOutput.width/16, _highResolutionOutput.height/16, 1};
+//    [compute dispatchThreadgroups:numThreadGroups threadsPerThreadgroup:threadPerGroup];
+//    [compute endEncoding];
+//    [compute popDebugGroup];
 
-    MandelNode ne = MandelNode();
-    ne.x = 512;
-    ne.y = 0;
-    ne.size = {512, 512};
-//    root.ne = &ne;
 
-    MandelNode sw = MandelNode();
-    sw.x = 0;
-    sw.y = 512;
-    sw.size = {512, 512};
-//    root.sw = &sw;
-
-    MandelNode se = MandelNode();
-    se.x = 512;
-    se.y = 512;
-    se.size = {512, 512};
-//    root.se = &se;
-
-    MandelNode *nodes = (MandelNode*)[_nodes contents];
-    nodes[0] = nw;
-    nodes[1] = ne;
-    nodes[2] = sw;
-    nodes[3] = se;
-
-    id<MTLComputeCommandEncoder> compute = [commandBuffer computeCommandEncoder];
-    [compute pushDebugGroup:@"compute"];
-    [compute setComputePipelineState:_kernel];
-    [compute setTexture:_highResolutionOutput atIndex:0];
-    [compute setTexture:_iterationCountTexture atIndex:1];
-    [compute setBuffer:_nodes offset:0 atIndex:0];
-    //[compute setTexture:_lowResolutionOutput atIndex:1];
-    MTLSize threadPerGroup = {16, 16, 1};
-    MTLSize numThreadGroups = {_highResolutionOutput.width/16, _highResolutionOutput.height/16, 1};
-    [compute dispatchThreadgroups:numThreadGroups threadsPerThreadgroup:threadPerGroup];
-    [compute endEncoding];
-    [compute popDebugGroup];
 //    id<MTLRenderCommandEncoder> orig = [commandBuffer renderCommandEncoderWithDescriptor:_generateC];
 //    [orig setFrontFacingWinding:MTLWindingCounterClockwise];
 //    [orig setRenderPipelineState:_calculateZ];
@@ -303,16 +282,59 @@
 //    [highRes endEncoding];
 //
     [commandBuffer commit];
+    
+}
+
+-(void)someFunc
+{
+    QuadNode *root = [[QuadNode alloc] initWithSize:{1024, 1024} atX:0 Y:0];
+
+    uint x = root.mandelNode.x;
+    uint y = root.mandelNode.y;
+    uint2 size = root.mandelNode.size / 2;
+
+    root.nw = [[QuadNode alloc] initWithSize:size atX:x Y:y];
+    root.ne = [[QuadNode alloc] initWithSize:size atX:x + size.x Y:y];
+    root.sw = [[QuadNode alloc] initWithSize:size atX:x Y:y + size.y];
+    root.se = [[QuadNode alloc] initWithSize:size atX:x + size.x Y:y + size.y];
+
+    dispatch_queue_t nwQ = dispatch_queue_create("nw" , NULL);
+    dispatch_queue_t neQ = dispatch_queue_create("ne" , NULL);
+    dispatch_queue_t swQ = dispatch_queue_create("sw" , NULL);
+    dispatch_queue_t seQ = dispatch_queue_create("se" , NULL);
+
+    dispatch_async(nwQ, ^{
+        [root.nw subdivideTexture:_highResolutionOutput currentDepth:1];
+        _nwDone = YES;
+    });
+    dispatch_async(neQ, ^{
+        [root.ne subdivideTexture:_highResolutionOutput currentDepth:1];
+        _neDone = YES;
+    });
+    dispatch_async(swQ, ^{
+        [root.sw subdivideTexture:_highResolutionOutput currentDepth:1];
+        _swDone = YES;
+    });
+    dispatch_async(seQ, ^{
+        [root.se subdivideTexture:_highResolutionOutput currentDepth:1];
+        _seDone = YES;
+    });
+
+   // _highResReady = YES;
 }
 
 - (void)encodeFinal:(id<MTLRenderCommandEncoder>)finalEncoder
 {
+    if(!_nwDone || !_neDone || !_swDone || !_seDone)
+    {
+        [finalEncoder endEncoding];
+        return;
+    }
     [finalEncoder pushDebugGroup:@"Final Pass"];
     [finalEncoder setFrontFacingWinding:MTLWindingCounterClockwise];
     [finalEncoder setRenderPipelineState:_finalPassPipelineState];
     [_quad encode:finalEncoder];
-//    if(_highResReady)
-        [finalEncoder setFragmentTexture:_iterationCountTexture atIndex:0];
+        [finalEncoder setFragmentTexture:_highResolutionOutput atIndex:0];
 //    else
 //        [finalEncoder setFragmentTexture:_lowResolutionOutput atIndex:0];
 

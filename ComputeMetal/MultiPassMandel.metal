@@ -36,7 +36,8 @@ fragment float4 generateZFragment(VertexInOut inFrag [[stage_in]], constant Mand
 
     float2 c = (inFrag._texCoord - 0.5) * zoom * float2(1, aspect) - pan;
 
-    return float4(c, 0.0, 0.0);
+    //return float4(c, 0.0, 0.0);
+    return float4(c,c);
 }
 
 fragment float4 lowResolutionFragment(VertexInOut inFrag [[stage_in]],
@@ -189,17 +190,18 @@ fragment FragOutput passMultiFragment(VertexInOut inFrag [[stage_in]],
 
 fragment float4 passFinal(VertexInOut inFrag [[stage_in]],
                           constant float4 *newColor [[buffer(0)]],
-                          texture2d<uint> previous [[texture(0)]],
+                          texture2d<float> previous [[texture(0)]],
                           float4 pos [[position]])
 {
     float4 color = float4(0.0, 0.0, 0.0, 1.0);
     constexpr sampler quad_sampler;
 
     uint4 p = uint4(pos);
-    uint input = previous.read(p.xy).x;// previous.sample(quad_sampler, inFrag._texCoord);
+    float4 input = previous.read(p.xy);// previous.sample(quad_sampler, inFrag._texCoord);
 
-    if(input < 256)
-        color.r = float(input)/255.0;
+//    if(input < 256)
+//        color.r = float(input)/255.0;
+    color.r = input.w;
     return color;
 }
 
