@@ -69,6 +69,8 @@ using namespace simd;
     MTLSize width;
     MTLSize height;
 
+    MTLRegion square = MTLRegionMake2D(_mandelNode.x, _mandelNode.y, _mandelNode.size.x, _mandelNode.size.y);
+
     width = MTLSizeMake(_mandelNode.size.x, 1, 1);
     height = MTLSizeMake(1, _mandelNode.size.y, 1);
 
@@ -84,8 +86,8 @@ using namespace simd;
     right.size = height;
     right.origin = MTLOriginMake(_mandelNode.x + _mandelNode.size.x - 1, _mandelNode.y, 0);
 
-    [c getBytes:_top bytesPerRow:sizeof(float4)*c.width*4 fromRegion:top mipmapLevel:0];
-    [c getBytes:_bottom bytesPerRow:sizeof(float4)*c.width*4 fromRegion:bottom mipmapLevel:0];
+    [c getBytes:_top bytesPerRow:sizeof(float4)*width.width fromRegion:top mipmapLevel:0];
+    [c getBytes:_bottom bytesPerRow:sizeof(float4)*width.width fromRegion:bottom mipmapLevel:0];
     [c getBytes:_left bytesPerRow:sizeof(float4) fromRegion:left mipmapLevel:0];
     [c getBytes:_right bytesPerRow:sizeof(float4) fromRegion:right mipmapLevel:0];
 
@@ -99,13 +101,14 @@ using namespace simd;
 
     for(int i = 0; i < _mandelNode.size.x; i++) //square, so either x or y
     {
+        topZ = _top[i].xy;
+        bottomZ = _bottom[i].xy;
+        leftZ = _left[i].xy;
+        rightZ = _right[i].xy;
+
         BOOL topDone = NO, bottomDone = NO, leftDone = NO, rightDone = NO;
         for(int it = 0; it < 256; it++)
         {
-            topZ = _top[i].xy;
-            bottomZ = _bottom[i].xy;
-            leftZ = _left[i].xy;
-            rightZ = _right[i].xy;
             if(!topDone)
             {
                 if(dot(topZ, topZ) > 4.0)
@@ -117,6 +120,7 @@ using namespace simd;
                 {
                     topZ.x = (topZ.x * topZ.x - topZ.y*topZ.y) + _top[i].x;
                     topZ.y = (2.0*topZ.x*topZ.y) + _top[i].y;
+                    _top[i].z = (float)it;
                 }
             }
             if(!bottomDone)
@@ -130,6 +134,7 @@ using namespace simd;
                 {
                     bottomZ.x = (bottomZ.x * bottomZ.x - bottomZ.y*bottomZ.y) + _bottom[i].x;
                     bottomZ.y = (2.0*bottomZ.x*bottomZ.y) + _bottom[i].y;
+                    _bottom[i].z = (float)it;
                 }
             }
             if(!leftDone)
@@ -143,6 +148,7 @@ using namespace simd;
                 {
                     leftZ.x = (leftZ.x * leftZ.x - leftZ.y*leftZ.y) + _left[i].x;
                     leftZ.y = (2.0*leftZ.x*leftZ.y) + _left[i].y;
+                    _left[i].z = (float)it;
                 }
             }
             if(!rightDone)
@@ -156,6 +162,7 @@ using namespace simd;
                 {
                     rightZ.x = (rightZ.x * rightZ.x - rightZ.y*rightZ.y) + _right[i].x;
                     rightZ.y = (2.0*rightZ.x*rightZ.y) + _right[i].y;
+                    _right[i].z = (float)it;
                 }
             }
             if(topDone && bottomDone && leftDone && rightDone)
@@ -168,7 +175,7 @@ using namespace simd;
         }
     }
 
-    if(!same && depth <= 5)
+    if(!same && depth >= 0)
     {
         uint x = self.mandelNode.x;
         uint y = self.mandelNode.y;
@@ -179,10 +186,10 @@ using namespace simd;
         self.sw = [[QuadNode alloc] initWithSize:size atX:x Y:y + size.y];
         self.se = [[QuadNode alloc] initWithSize:size atX:x + size.x Y:y + size.y];
 
-        [self.nw subdivideTexture:c currentDepth:depth+1];
-        [self.ne subdivideTexture:c currentDepth:depth+1];
-        [self.sw subdivideTexture:c currentDepth:depth+1];
-        [self.se subdivideTexture:c currentDepth:depth+1];
+        [self.nw subdivideTexture:c currentDepth:depth-1];
+        [self.ne subdivideTexture:c currentDepth:depth-1];
+        [self.sw subdivideTexture:c currentDepth:depth-1];
+        [self.se subdivideTexture:c currentDepth:depth-1];
     }
     else
     {
@@ -193,8 +200,8 @@ using namespace simd;
             _left[i].w = 1.0;
             _right[i].w = 1.0;
         }
-        [c replaceRegion:top mipmapLevel:0 withBytes:_top bytesPerRow:sizeof(float4)*c.width];
-        [c replaceRegion:bottom mipmapLevel:0 withBytes:_bottom bytesPerRow:sizeof(float4)*c.width];
+        [c replaceRegion:top mipmapLevel:0 withBytes:_top bytesPerRow:sizeof(float4)*width.width];
+        [c replaceRegion:bottom mipmapLevel:0 withBytes:_bottom bytesPerRow:sizeof(float4)*width.width];
         [c replaceRegion:left mipmapLevel:0 withBytes:_left bytesPerRow:sizeof(float4)];
         [c replaceRegion:right mipmapLevel:0 withBytes:_right bytesPerRow:sizeof(float4)];
     }

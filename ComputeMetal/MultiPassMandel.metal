@@ -199,13 +199,13 @@ fragment float4 passFinal(VertexInOut inFrag [[stage_in]],
     uint4 p = uint4(pos);
     float4 input = previous.read(p.xy);// previous.sample(quad_sampler, inFrag._texCoord);
 
-//    if(input < 256)
-//        color.r = float(input)/255.0;
+//    if(input.z < 255)
+//        color.r = input.z/255.0;
     color.r = input.w;
     return color;
 }
 
-kernel void mandelKernel(texture2d<float, access::read> inTexture [[texture(0)]],
+kernel void mandelIterationKernel(texture2d<float, access::read> inTexture [[texture(0)]],
                          texture2d<uint, access::write> outTexture [[texture(1)]],
                          constant MandelNode *nodes [[buffer(0)]],
                          uint2 tptg [[thread_position_in_threadgroup]],
@@ -215,28 +215,17 @@ kernel void mandelKernel(texture2d<float, access::read> inTexture [[texture(0)]]
     float2 z = input.xy;
     float2 c = input.xy;
     uint32_t i = 0;
-//    for(i = 0; i <= 256; i++)
-//    {
-//        if(dot(z, z) > 4.0) //leave unchanged, but copy through
-//        {
-//            break;
-//        }
-//        else
-//        {
-//            z = float2(z.x * z.x - z.y*z.y, 2.0*z.x*z.y) + c;
-//        }
-//    }
-    if(gid.x == nodes[0].x || gid.x == nodes[1].x || gid.x == nodes[2].x || gid.x == nodes[3].x ||
-       gid.x == nodes[0].x + nodes[0].size.x - 1 ||
-       gid.x == nodes[1].x + nodes[1].size.x - 1 ||
-       gid.x == nodes[2].x + nodes[2].size.x - 1 ||
-       gid.x == nodes[3].x + nodes[3].size.x - 1 ||
-       gid.y == nodes[0].y || gid.y == nodes[1].y || gid.y == nodes[2].y || gid.y == nodes[3].y ||
-       gid.y == nodes[0].y + nodes[0].size.y - 1 ||
-       gid.y == nodes[1].y + nodes[1].size.y - 1 ||
-       gid.y == nodes[2].y + nodes[2].size.y - 1 ||
-       gid.y == nodes[3].y + nodes[3].size.y - 1)
-        i = 255;
+    for(i = 0; i <= 256; i++)
+    {
+        if(dot(z, z) > 4.0) //leave unchanged, but copy through
+        {
+            break;
+        }
+        else
+        {
+            z = float2(z.x * z.x - z.y*z.y, 2.0*z.x*z.y) + c;
+        }
+    }
     outTexture.write(i, gid);
 }
 

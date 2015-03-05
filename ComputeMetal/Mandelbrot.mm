@@ -287,6 +287,11 @@
 
 -(void)someFunc
 {
+    float4 temp[16][16];
+    MTLRegion region = MTLRegionMake2D(0, 0, 16, 16);
+    [_highResolutionOutput getBytes:temp bytesPerRow:sizeof(float4)*16 fromRegion:region mipmapLevel:0];
+    float4 t = temp[1][0];
+
     QuadNode *root = [[QuadNode alloc] initWithSize:{1024, 1024} atX:0 Y:0];
 
     uint x = root.mandelNode.x;
@@ -304,19 +309,19 @@
     dispatch_queue_t seQ = dispatch_queue_create("se" , NULL);
 
     dispatch_async(nwQ, ^{
-        [root.nw subdivideTexture:_highResolutionOutput currentDepth:1];
+        [root.nw subdivideTexture:_highResolutionOutput currentDepth:5];
         _nwDone = YES;
     });
     dispatch_async(neQ, ^{
-        [root.ne subdivideTexture:_highResolutionOutput currentDepth:1];
+        [root.ne subdivideTexture:_highResolutionOutput currentDepth:5];
         _neDone = YES;
     });
     dispatch_async(swQ, ^{
-        [root.sw subdivideTexture:_highResolutionOutput currentDepth:1];
+        [root.sw subdivideTexture:_highResolutionOutput currentDepth:5];
         _swDone = YES;
     });
     dispatch_async(seQ, ^{
-        [root.se subdivideTexture:_highResolutionOutput currentDepth:1];
+        [root.se subdivideTexture:_highResolutionOutput currentDepth:5];
         _seDone = YES;
     });
 
