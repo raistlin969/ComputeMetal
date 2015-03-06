@@ -202,31 +202,45 @@ fragment float4 passFinal(VertexInOut inFrag [[stage_in]],
 //    if(input.z < 255)
 //        color.r = input.z/255.0;
     color.r = input.w;
+//    color.g = input.x;
+    //color.b = input.y;
     return color;
 }
 
-kernel void mandelIterationKernel(texture2d<float, access::read> inTexture [[texture(0)]],
-                         texture2d<uint, access::write> outTexture [[texture(1)]],
-                         constant MandelNode *nodes [[buffer(0)]],
+kernel void mandelIterationKernel(//texture2d<float, access::read> inTexture [[texture(0)]],
+//                         texture2d<uint, access::write> outTexture [[texture(1)]],
+//                         constant MandelNode *nodes [[buffer(0)]],
+                                  device float4 *regions [[buffer(0)]],
                          uint2 tptg [[thread_position_in_threadgroup]],
-                         uint2 gid [[thread_position_in_grid]])
+                                  uint2 tpg [[threads_per_threadgroup]],
+                         uint2 tgp [[threadgroup_position_in_grid]])
 {
-    float4 input = inTexture.read(gid);
-    float2 z = input.xy;
-    float2 c = input.xy;
-    uint32_t i = 0;
-    for(i = 0; i <= 256; i++)
-    {
-        if(dot(z, z) > 4.0) //leave unchanged, but copy through
-        {
-            break;
-        }
-        else
-        {
-            z = float2(z.x * z.x - z.y*z.y, 2.0*z.x*z.y) + c;
-        }
-    }
-    outTexture.write(i, gid);
+    device float4* pixels = &regions[tgp.x];
+    float4 pixel = pixels[tptg.y * (2*tpg.x) + tptg.x];
+    //pixel.x = (float)tptg.x / (float)tpg.x*2;
+    //pixel.y = (float)tptg.y / (float)tpg.y*2;
+    pixel.x = 1.0;
+
+    pixel = pixels[(tptg.y*2) * (2*tpg.x) + (tptg.x*2)];
+    //pixel.x = (float)tptg.x*2 / (float)tpg.x*2;
+    //pixel.y = (float)tptg.y*2 / (float)tpg.y*2;
+    pixel.x = 1.0;
+//    float4 input = inTexture.read(gid);
+//    float2 z = input.xy;
+//    float2 c = input.xy;
+//    uint32_t i = 0;
+//    for(i = 0; i <= 256; i++)
+//    {
+//        if(dot(z, z) > 4.0) //leave unchanged, but copy through
+//        {
+//            break;
+//        }
+//        else
+//        {
+//            z = float2(z.x * z.x - z.y*z.y, 2.0*z.x*z.y) + c;
+//        }
+//    }
+//    outTexture.write(i, gid);
 }
 
 kernel void test(texture2d<float, access::write> outTexture [[texture(0)]],

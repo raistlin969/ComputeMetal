@@ -60,7 +60,7 @@ using namespace simd;
         delete[] _buffer;
 }
 
--(void)subdivideTexture:(id<MTLTexture>)c currentDepth:(int)depth
+-(void)subdivideTexture:(id<MTLTexture>)c currentDepth:(int)depth levelRegions:(std::vector<float4 *> *)regions regionInfo:(std::vector<MTLRegion>*)info
 {
     MTLRegion top;
     MTLRegion bottom;
@@ -175,7 +175,7 @@ using namespace simd;
         }
     }
 
-    if(!same && depth >= 0)
+    if(!same && depth > 0)
     {
         uint x = self.mandelNode.x;
         uint y = self.mandelNode.y;
@@ -186,10 +186,10 @@ using namespace simd;
         self.sw = [[QuadNode alloc] initWithSize:size atX:x Y:y + size.y];
         self.se = [[QuadNode alloc] initWithSize:size atX:x + size.x Y:y + size.y];
 
-        [self.nw subdivideTexture:c currentDepth:depth-1];
-        [self.ne subdivideTexture:c currentDepth:depth-1];
-        [self.sw subdivideTexture:c currentDepth:depth-1];
-        [self.se subdivideTexture:c currentDepth:depth-1];
+        [self.nw subdivideTexture:c currentDepth:depth-1 levelRegions:regions regionInfo:info];
+        [self.ne subdivideTexture:c currentDepth:depth-1 levelRegions:regions regionInfo:info];
+        [self.sw subdivideTexture:c currentDepth:depth-1 levelRegions:regions regionInfo:info];
+        [self.se subdivideTexture:c currentDepth:depth-1 levelRegions:regions regionInfo:info];
     }
     else
     {
@@ -204,6 +204,11 @@ using namespace simd;
         [c replaceRegion:bottom mipmapLevel:0 withBytes:_bottom bytesPerRow:sizeof(float4)*width.width];
         [c replaceRegion:left mipmapLevel:0 withBytes:_left bytesPerRow:sizeof(float4)];
         [c replaceRegion:right mipmapLevel:0 withBytes:_right bytesPerRow:sizeof(float4)];
+
+        float4 *pixels = new float4[_mandelNode.size.y*_mandelNode.size.x];
+        [c getBytes:pixels bytesPerRow:sizeof(float4)*width.width fromRegion:square mipmapLevel:0];
+        regions[depth].push_back(pixels);
+        info[depth].push_back(square);
     }
 }
 

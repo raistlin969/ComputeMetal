@@ -203,8 +203,8 @@
         {
             //set metal layer to drawable size incase orientation or size changes
             CGSize drawableSize = self.bounds.size;
-            //drawableSize.width *= self.contentScaleFactor;
-            //drawableSize.height *= self.contentScaleFactor;
+            drawableSize.width *= self.contentScaleFactor;
+            drawableSize.height *= self.contentScaleFactor;
             
             _metalLayer.drawableSize = drawableSize;
             

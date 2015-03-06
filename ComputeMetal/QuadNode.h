@@ -10,6 +10,8 @@
 #import <Metal/Metal.h>
 #import "Common.h"
 
+#include <vector>
+
 @interface QuadNode : NSObject
 
 @property(nonatomic) MandelNode mandelNode;
@@ -19,7 +21,7 @@
 @property(strong, nonatomic) QuadNode *se;
 
 
--(void)subdivideTexture:(id<MTLTexture>)c currentDepth:(int)depth;
+-(void)subdivideTexture:(id<MTLTexture>)c currentDepth:(int)depth levelRegions:(std::vector<float4*>*)regions regionInfo:(std::vector<MTLRegion>*)info;
 -(void)createBufferSize:(int)size;
 -(void)destroyBuffer;
 -(instancetype)initWithSize:(uint2)size atX:(uint)x Y:(uint)y;
