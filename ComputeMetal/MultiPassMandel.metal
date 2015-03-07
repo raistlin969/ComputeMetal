@@ -36,8 +36,8 @@ fragment float4 generateZFragment(VertexInOut inFrag [[stage_in]], constant Mand
 
     float2 c = (inFrag._texCoord - 0.5) * zoom * float2(1, aspect) - pan;
 
-    //return float4(c, 0.0, 0.0);
-    return float4(c,c);
+    return float4(c, 0.0, 0.0);
+    //return float4(c,c);
 }
 
 fragment float4 lowResolutionFragment(VertexInOut inFrag [[stage_in]],
@@ -202,7 +202,7 @@ fragment float4 passFinal(VertexInOut inFrag [[stage_in]],
 //    if(input.z < 255)
 //        color.r = input.z/255.0;
     color.r = input.w;
-//    color.g = input.x;
+    color.g = input.z;
     //color.b = input.y;
     return color;
 }
@@ -216,15 +216,15 @@ kernel void mandelIterationKernel(//texture2d<float, access::read> inTexture [[t
                          uint2 tgp [[threadgroup_position_in_grid]])
 {
     device float4* pixels = &regions[tgp.x];
-    float4 pixel = pixels[tptg.y * (2*tpg.x) + tptg.x];
+    float4 pixel = pixels[tptg.y * (tpg.x) + tptg.x];
     //pixel.x = (float)tptg.x / (float)tpg.x*2;
     //pixel.y = (float)tptg.y / (float)tpg.y*2;
-    pixel.x = 1.0;
+    pixel.z = 1.0;
 
-    pixel = pixels[(tptg.y*2) * (2*tpg.x) + (tptg.x*2)];
+   // pixel = pixels[(tptg.y*2) * (tpg.x) + (tptg.x*2)];
     //pixel.x = (float)tptg.x*2 / (float)tpg.x*2;
     //pixel.y = (float)tptg.y*2 / (float)tpg.y*2;
-    pixel.x = 1.0;
+   // pixel.x = 0.0;
 //    float4 input = inTexture.read(gid);
 //    float2 z = input.xy;
 //    float2 c = input.xy;

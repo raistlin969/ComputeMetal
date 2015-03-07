@@ -315,8 +315,14 @@
             int pos = 0;
             for(std::vector<float4*>::iterator it = regions[0].begin(); it != regions[0].end(); ++it)
             {
-                memcpy(&data[pos], *it, 1024);
-                pos++;
+//                float4 *temp = *it;
+//                for(int i = 0; i < 1024; i++)
+//                {
+//                    temp[i].z = 1.0;
+//                    data[i+pos] = temp[i];
+//                }
+                memcpy(&data[pos], *it, 1024*sizeof(float4));
+                pos+=1024;
                 delete *it;
             }
             id<MTLBuffer> buffer = [_device newBufferWithBytes:data length:regions[0].size()*sizeof(float4)*1024 options:0];
@@ -336,10 +342,13 @@
                 int i = 0;
                 for(std::vector<MTLRegion>::const_iterator it = info[0].begin(); it != info[0].end(); it++)
                 {
-                    [_highResolutionOutput replaceRegion:*it mipmapLevel:0 withBytes:&dataDone[i] bytesPerRow:sizeof(float4)*it->size.width];
-                    i++;
-                }
+                    if(memcmp(dataDone, data, 1024*sizeof(float4)) != 0)
+                        NSLog(@"Fuck");
 
+                    [_highResolutionOutput replaceRegion:*it mipmapLevel:0 withBytes:&dataDone[i] bytesPerRow:sizeof(float4)*it->size.width];
+                    i+=1024;
+                }
+                _nwDone = YES;
 //                std::vector<MTLRegion>::const_iterator infoIt = info[0].begin();
 //                for(std::vector<float4*>::const_iterator it = leafRegion.begin(); it != leafRegion.end(); it++)
 //                {
@@ -349,7 +358,7 @@
             }];
 
             [commandBuffer commit];
-            _nwDone = YES;
+//            _nwDone = YES;
             for(int i = 0; i < 5; i++)
             {
                 NSLog(@"Thread NW level %d count %lu", i, regions[i].size());
