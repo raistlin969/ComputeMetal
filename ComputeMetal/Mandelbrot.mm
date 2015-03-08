@@ -286,6 +286,73 @@
     
 }
 
+-(void)performIterationsOnArea:(float4*)area describedByRegion:(MTLRegion)region
+{
+    id<MTLBuffer> buffer = [_device newBufferWithBytes:area length:1024*sizeof(float4) options:0];
+    id<MTLCommandBuffer> commandBuffer = [_queue commandBuffer];
+    id<MTLComputeCommandEncoder> compute = [commandBuffer computeCommandEncoder];
+    [compute setComputePipelineState:_kernel];
+    
+    [compute setBuffer:buffer offset:0 atIndex:0];
+    MTLSize threadsPerGroup = {1, 1, 1};
+    MTLSize numThreadGroups = {1024, 1, 1};
+    [compute dispatchThreadgroups:numThreadGroups threadsPerThreadgroup:threadsPerGroup];
+    [compute endEncoding];
+    
+    [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer>)
+     {
+         float4 *dataDone = (float4*)[buffer contents];
+         [_highResolutionOutput replaceRegion:region mipmapLevel:0 withBytes:dataDone bytesPerRow:sizeof(float4)*region.size.width];
+     }];
+    
+    [commandBuffer commit];
+}
+
+-(void)performIterationsOnArea:(std::vector<float4*>&)area describedByRegions:(std::vector<MTLRegion>*)regions
+{
+    if(area.size() <= 0 || regions->size() <= 0)
+        return;
+    
+    NSUInteger regionWidth = (*regions)[0].size.width;
+    NSUInteger regionHeight = (*regions)[0].size.height;
+    NSUInteger regionArea = regionWidth * regionHeight;
+    
+    float4 *data = new float4[regionArea*area.size()];
+    int pos = 0;
+    for(std::vector<float4*>::iterator it = area.begin(); it != area.end(); ++it)
+    {
+        memcpy(&data[pos], *it, regionArea*sizeof(float4));
+        pos+=regionArea;
+        delete *it;
+    }
+    id<MTLBuffer> buffer = [_device newBufferWithBytes:data length:area.size()*sizeof(float4)*regionArea options:0];
+    id<MTLCommandBuffer> commandBuffer = [_queue commandBuffer];
+    id<MTLComputeCommandEncoder> compute = [commandBuffer computeCommandEncoder];
+    [compute setComputePipelineState:_kernel];
+    
+    [compute setBuffer:buffer offset:0 atIndex:0];
+    MTLSize threadsPerGroup = {1, 1, 1};
+    MTLSize numThreadGroups = {area.size()*regionArea, 1, 1};
+    [compute dispatchThreadgroups:numThreadGroups threadsPerThreadgroup:threadsPerGroup];
+    [compute endEncoding];
+    area.clear();
+    
+    [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer>)
+     {
+         float4 *dataDone = (float4*)[buffer contents];
+         int i = 0;
+         for(std::vector<MTLRegion>::const_iterator it = regions->begin(); it != regions->end(); ++it)
+         {
+             [_highResolutionOutput replaceRegion:*it mipmapLevel:0 withBytes:&dataDone[i] bytesPerRow:sizeof(float4)*regionWidth];
+             i+=regionArea;
+         }
+         _nwDone = YES;
+     }];
+    
+    [commandBuffer commit];
+    delete [] data;
+}
+
 -(void)someFunc
 {
     QuadNode *root = [[QuadNode alloc] initWithSize:{1024, 1024} atX:0 Y:0];
@@ -307,116 +374,33 @@
         dispatch_queue_t seQ = dispatch_queue_create("se" , NULL);
 
         dispatch_async(nwQ, ^{
-            std::vector<float4*> regions[4];
-            std::vector<MTLRegion> *info = new std::vector<MTLRegion>[4];
-            std::vector<float4*> leafRegion = regions[0];
-            [root.nw subdivideTexture:_highResolutionOutput currentDepth:4 levelRegions:regions regionInfo:info];
-            float4 *data = new float4[32*32*regions[0].size()];
-            int pos = 0;
-            for(std::vector<float4*>::iterator it = regions[0].begin(); it != regions[0].end(); ++it)
-            {
-//                float4 *temp = *it;
-//                for(int i = 0; i < 1024; i++)
-//                {
-//                    temp[i].z = 1.0;
-//                    data[i+pos] = temp[i];
-//                }
-                memcpy(&data[pos], *it, 1024*sizeof(float4));
-                pos+=1024;
-                delete *it;
-            }
-            id<MTLBuffer> buffer = [_device newBufferWithBytes:data length:regions[0].size()*sizeof(float4)*1024 options:0];
-            id<MTLCommandBuffer> commandBuffer = [_queue commandBuffer];
-            id<MTLComputeCommandEncoder> compute = [commandBuffer computeCommandEncoder];
-            [compute setComputePipelineState:_kernel];
-
-            [compute setBuffer:buffer offset:0 atIndex:0];
-            MTLSize threadsPerGroup = {16, 16, 1};
-            MTLSize numThreadGroups = {regions[0].size(), 1, 1};
-            [compute dispatchThreadgroups:numThreadGroups threadsPerThreadgroup:threadsPerGroup];
-            [compute endEncoding];
-
-            [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer>)
-            {
-                float4 *dataDone = (float4*)[buffer contents];
-                int i = 0;
-                for(std::vector<MTLRegion>::const_iterator it = info[0].begin(); it != info[0].end(); it++)
-                {
-                    if(memcmp(dataDone, data, 1024*sizeof(float4)) != 0)
-                        NSLog(@"Fuck");
-
-                    [_highResolutionOutput replaceRegion:*it mipmapLevel:0 withBytes:&dataDone[i] bytesPerRow:sizeof(float4)*it->size.width];
-                    i+=1024;
-                }
-                _nwDone = YES;
-//                std::vector<MTLRegion>::const_iterator infoIt = info[0].begin();
-//                for(std::vector<float4*>::const_iterator it = leafRegion.begin(); it != leafRegion.end(); it++)
-//                {
-//                    [_highResolutionOutput replaceRegion:*infoIt mipmapLevel:0 withBytes:*it bytesPerRow:sizeof(float4)*infoIt->size.width];
-//                    delete *it;
-//                }
-            }];
-
-            [commandBuffer commit];
-//            _nwDone = YES;
-            for(int i = 0; i < 5; i++)
-            {
-                NSLog(@"Thread NW level %d count %lu", i, regions[i].size());
-            }
+            std::vector<float4*> area[4];
+            std::vector<MTLRegion> *regions = new std::vector<MTLRegion>[4];
+            
+            [root.nw subdivideTexture:_highResolutionOutput currentDepth:4 levelRegions:area regionInfo:regions mandelbrot:self];
+            [self performIterationsOnArea:area[0] describedByRegions:&regions[0]];
         });
-//        dispatch_async(neQ, ^{
-//            std::vector<float4*> regions[5];
-//            std::vector<MTLRegion> info[5];
-//            [root.ne subdivideTexture:_highResolutionOutput currentDepth:5 levelRegions:regions regionInfo:info];
-//            id<MTLCommandBuffer> commandBuffer = [_queue commandBuffer];
-//            id<MTLComputeCommandEncoder> compute = [commandBuffer computeCommandEncoder];
-//            [compute setComputePipelineState:_kernel];
-//            float4 *leaf = regions[0][0];
-//            id<MTLBuffer> buffer = [_device newBufferWithBytes:leaf length:regions[0].size() options:0];
-//            [compute setBuffer:buffer offset:0 atIndex:0];
-//            MTLSize threadsPerGroup = {16, 16, 1};
-//            MTLSize numThreadGroups = {regions[0].size(), 1, 1};
-//            [compute dispatchThreadgroups:numThreadGroups threadsPerThreadgroup:threadsPerGroup];
-//            [compute endEncoding];
-//
-//            [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer>) {
-//                ;
-//            }];
-//
-//            [commandBuffer commit];
-//
-//            _neDone = YES;
-//            for(int i = 0; i < 5; i++)
-//            {
-//                NSLog(@"Thread NE level %d count %lu", i, regions[i].size());
-//                for(std::vector<float4*>::iterator it = regions[i].begin(); it != regions[i].end(); it++)
-//                    delete *it;
-//            }
-//        });
-//        dispatch_async(swQ, ^{
-//            std::vector<float4*> regions[5];
-//            std::vector<MTLRegion> info[5];
-//            [root.sw subdivideTexture:_highResolutionOutput currentDepth:5 levelRegions:regions regionInfo:info];
-//            _swDone = YES;
-//            for(int i = 0; i < 5; i++)
-//            {
-//                NSLog(@"Thread SW level %d count %lu", i, regions[i].size());
-//                for(std::vector<float4*>::iterator it = regions[i].begin(); it != regions[i].end(); it++)
-//                    delete *it;
-//            }
-//        });
-//        dispatch_async(seQ, ^{
-//            std::vector<float4*> regions[5];
-//            std::vector<MTLRegion> info[5];
-//            [root.se subdivideTexture:_highResolutionOutput currentDepth:5 levelRegions:regions regionInfo:info];
-//            _seDone = YES;
-//            for(int i = 0; i < 5; i++)
-//            {
-//                NSLog(@"Thread SE level %d count %lu", i, regions[i].size());
-//                for(std::vector<float4*>::iterator it = regions[i].begin(); it != regions[i].end(); it++)
-//                    delete *it;
-//            }
-//        });
+        dispatch_async(neQ, ^{
+            std::vector<float4*> area[4];
+            std::vector<MTLRegion> *regions = new std::vector<MTLRegion>[4];
+            
+            [root.ne subdivideTexture:_highResolutionOutput currentDepth:4 levelRegions:area regionInfo:regions mandelbrot:self];
+            [self performIterationsOnArea:area[0] describedByRegions:&regions[0]];
+        });
+        dispatch_async(swQ, ^{
+            std::vector<float4*> area[4];
+            std::vector<MTLRegion> *regions = new std::vector<MTLRegion>[4];
+            
+            [root.sw subdivideTexture:_highResolutionOutput currentDepth:4 levelRegions:area regionInfo:regions mandelbrot:self];
+            [self performIterationsOnArea:area[0] describedByRegions:&regions[0]];
+        });
+        dispatch_async(seQ, ^{
+            std::vector<float4*> area[4];
+            std::vector<MTLRegion> *regions = new std::vector<MTLRegion>[4];
+            
+            [root.se subdivideTexture:_highResolutionOutput currentDepth:4 levelRegions:area regionInfo:regions mandelbrot:self];
+            [self performIterationsOnArea:area[0] describedByRegions:&regions[0]];
+        });
     }
    // _highResReady = YES;
 }

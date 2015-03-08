@@ -11,6 +11,7 @@
 #import "Common.h"
 
 #include <vector>
+@class Mandelbrot;
 
 @interface QuadNode : NSObject
 
@@ -21,7 +22,7 @@
 @property(strong, nonatomic) QuadNode *se;
 
 
--(void)subdivideTexture:(id<MTLTexture>)c currentDepth:(int)depth levelRegions:(std::vector<float4*>*)regions regionInfo:(std::vector<MTLRegion>*)info;
+-(void)subdivideTexture:(id<MTLTexture>)c currentDepth:(int)depth levelRegions:(std::vector<float4*>*)regions regionInfo:(std::vector<MTLRegion>*)info mandelbrot:(Mandelbrot *)mandel;
 -(void)createBufferSize:(int)size;
 -(void)destroyBuffer;
 -(instancetype)initWithSize:(uint2)size atX:(uint)x Y:(uint)y;

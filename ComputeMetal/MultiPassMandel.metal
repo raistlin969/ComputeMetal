@@ -197,7 +197,7 @@ fragment float4 passFinal(VertexInOut inFrag [[stage_in]],
     constexpr sampler quad_sampler;
 
     uint4 p = uint4(pos);
-    float4 input = previous.read(p.xy);// previous.sample(quad_sampler, inFrag._texCoord);
+    float4 input = previous.sample(quad_sampler, inFrag._texCoord);
 
 //    if(input.z < 255)
 //        color.r = input.z/255.0;
@@ -211,16 +211,9 @@ kernel void mandelIterationKernel(//texture2d<float, access::read> inTexture [[t
 //                         texture2d<uint, access::write> outTexture [[texture(1)]],
 //                         constant MandelNode *nodes [[buffer(0)]],
                                   device float4 *regions [[buffer(0)]],
-                         uint2 tptg [[thread_position_in_threadgroup]],
-                                  uint2 tpg [[threads_per_threadgroup]],
-                         uint2 tgp [[threadgroup_position_in_grid]])
+                                  uint gid [[thread_position_in_grid]])
 {
-    device float4* pixels = &regions[tgp.x];
-    float4 pixel = pixels[tptg.y * (tpg.x) + tptg.x];
-    //pixel.x = (float)tptg.x / (float)tpg.x*2;
-    //pixel.y = (float)tptg.y / (float)tpg.y*2;
-    pixel.z = 1.0;
-
+    regions[gid].z = 1.0;
    // pixel = pixels[(tptg.y*2) * (tpg.x) + (tptg.x*2)];
     //pixel.x = (float)tptg.x*2 / (float)tpg.x*2;
     //pixel.y = (float)tptg.y*2 / (float)tpg.y*2;

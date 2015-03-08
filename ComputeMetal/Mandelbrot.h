@@ -22,5 +22,5 @@
 - (void)changeColors;
 - (void)panX:(float)x Y:(float)y;
 - (void)zoom:(float)zoom;
-
+-(void)performIterationsOnArea:(float4*)area describedByRegion:(MTLRegion)region;
 @end

@@ -7,6 +7,7 @@
 //
 
 #import "QuadNode.h"
+#import "Mandelbrot.h"
 
 using namespace simd;
 
@@ -20,7 +21,7 @@ using namespace simd;
     float4 *_left;
 }
 
--(id)initWithSize:(uint2)size atX:(uint)x Y:(uint)y
+-(instancetype)initWithSize:(uint2)size atX:(uint)x Y:(uint)y
 {
     self = [super init];
     if(self)
@@ -60,7 +61,7 @@ using namespace simd;
         delete[] _buffer;
 }
 
--(void)subdivideTexture:(id<MTLTexture>)c currentDepth:(int)depth levelRegions:(std::vector<float4 *> *)regions regionInfo:(std::vector<MTLRegion>*)info
+-(void)subdivideTexture:(id<MTLTexture>)c currentDepth:(int)depth levelRegions:(std::vector<float4 *> *)regions regionInfo:(std::vector<MTLRegion>*)info mandelbrot:(Mandelbrot *)mandel
 {
     MTLRegion top;
     MTLRegion bottom;
@@ -186,10 +187,10 @@ using namespace simd;
         self.sw = [[QuadNode alloc] initWithSize:size atX:x Y:y + size.y];
         self.se = [[QuadNode alloc] initWithSize:size atX:x + size.x Y:y + size.y];
 
-        [self.nw subdivideTexture:c currentDepth:depth-1 levelRegions:regions regionInfo:info];
-        [self.ne subdivideTexture:c currentDepth:depth-1 levelRegions:regions regionInfo:info];
-        [self.sw subdivideTexture:c currentDepth:depth-1 levelRegions:regions regionInfo:info];
-        [self.se subdivideTexture:c currentDepth:depth-1 levelRegions:regions regionInfo:info];
+        [self.nw subdivideTexture:c currentDepth:depth-1 levelRegions:regions regionInfo:info mandelbrot:mandel];
+        [self.ne subdivideTexture:c currentDepth:depth-1 levelRegions:regions regionInfo:info mandelbrot:mandel];
+        [self.sw subdivideTexture:c currentDepth:depth-1 levelRegions:regions regionInfo:info mandelbrot:mandel];
+        [self.se subdivideTexture:c currentDepth:depth-1 levelRegions:regions regionInfo:info mandelbrot:mandel];
     }
     else
     {
@@ -205,10 +206,15 @@ using namespace simd;
         [c replaceRegion:left mipmapLevel:0 withBytes:_left bytesPerRow:sizeof(float4)];
         [c replaceRegion:right mipmapLevel:0 withBytes:_right bytesPerRow:sizeof(float4)];
 
-        float4 *pixels = new float4[_mandelNode.size.y*_mandelNode.size.x];
-        [c getBytes:pixels bytesPerRow:sizeof(float4)*width.width fromRegion:square mipmapLevel:0];
-        regions[depth].push_back(pixels);
-        info[depth].push_back(square);
+//        if(depth == 0)
+//        {
+            float4 *pixels = new float4[_mandelNode.size.y*_mandelNode.size.x];
+            [c getBytes:pixels bytesPerRow:sizeof(float4)*width.width fromRegion:square mipmapLevel:0];
+            //[mandel performIterationsOnArea:pixels describedByRegion:square];
+            //delete [] pixels;
+            regions[depth].push_back(pixels);
+            info[depth].push_back(square);
+//        }
     }
 }
 
