@@ -25,7 +25,8 @@
     
     id<MTLRenderPipelineState> _finalPassPipelineState;
 
-    id<MTLComputePipelineState> _kernel;
+    id<MTLComputePipelineState> _kernelIteration;
+    id<MTLComputePipelineState> _kernelFill;
 
     Quad *_quad;
     MandelData _data;
@@ -117,7 +118,8 @@
 
     id<MTLFunction> vertexFunction = _newFunctionFromLibrary(_library, @"passThroughVertex");
     id<MTLFunction> finalFragment = _newFunctionFromLibrary(_library, @"passFinal");
-    id<MTLFunction> mandelKernel = _newFunctionFromLibrary(_library, @"mandelIterationKernel");
+    id<MTLFunction> mandelIterationKernel = _newFunctionFromLibrary(_library, @"mandelIterationKernel");
+    id<MTLFunction> mandelFillKernel = _newFunctionFromLibrary(_library, @"mandelFillKernel");
 
     id<MTLFunction> lowResolutionFragment = _newFunctionFromLibrary(_library, @"lowResolutionFragment");
     id<MTLFunction> highResolutionFragment = _newFunctionFromLibrary(_library, @"highResolutionFragment");
@@ -173,8 +175,11 @@
     _frameIteration = [_device newRenderPipelineStateWithDescriptor:highDesc error:&error];
     CheckPipelineError(_frameIteration, error);
 
-    _kernel = [_device newComputePipelineStateWithFunction:mandelKernel error:&error];
-    CheckPipelineError(_kernel, error);
+    _kernelIteration = [_device newComputePipelineStateWithFunction:mandelIterationKernel error:&error];
+    CheckPipelineError(_kernelIteration, error);
+    
+    _kernelFill = [_device newComputePipelineStateWithFunction:mandelFillKernel error:&error];
+    CheckPipelineError(_kernelFill, error);
 
     
 
@@ -291,7 +296,7 @@
     id<MTLBuffer> buffer = [_device newBufferWithBytes:area length:1024*sizeof(float4) options:0];
     id<MTLCommandBuffer> commandBuffer = [_queue commandBuffer];
     id<MTLComputeCommandEncoder> compute = [commandBuffer computeCommandEncoder];
-    [compute setComputePipelineState:_kernel];
+    [compute setComputePipelineState:_kernelIteration];
     
     [compute setBuffer:buffer offset:0 atIndex:0];
     MTLSize threadsPerGroup = {1, 1, 1};
@@ -323,14 +328,63 @@
     {
         memcpy(&data[pos], *it, regionArea*sizeof(float4));
         pos+=regionArea;
-        delete *it;
+        //delete *it;
     }
     id<MTLBuffer> buffer = [_device newBufferWithBytes:data length:area.size()*sizeof(float4)*regionArea options:0];
     id<MTLCommandBuffer> commandBuffer = [_queue commandBuffer];
     id<MTLComputeCommandEncoder> compute = [commandBuffer computeCommandEncoder];
-    [compute setComputePipelineState:_kernel];
+    [compute setComputePipelineState:_kernelIteration];
     
     [compute setBuffer:buffer offset:0 atIndex:0];
+    MTLSize threadsPerGroup = {regionWidth, 1, 1};
+    MTLSize numThreadGroups = {area.size()*regionHeight, 1, 1};
+    [compute dispatchThreadgroups:numThreadGroups threadsPerThreadgroup:threadsPerGroup];
+    [compute endEncoding];
+    area.clear();
+    
+    [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer>)
+     {
+         float4 *dataDone = (float4*)[buffer contents];
+         int i = 0;
+         for(std::vector<MTLRegion>::const_iterator it = regions->begin(); it != regions->end(); ++it)
+         {
+             [_highResolutionOutput replaceRegion:*it mipmapLevel:0 withBytes:&dataDone[i] bytesPerRow:sizeof(float4)*regionWidth];
+             i+=regionArea;
+         }
+         _nwDone = YES;
+     }];
+    
+    [commandBuffer commit];
+    delete [] data;
+}
+
+-(void)fillArea:(std::vector<float4*>&)area describedByRegions:(std::vector<MTLRegion>*)regions
+{
+    if(area.size() <= 0 || regions->size() <= 0)
+        return;
+    
+    NSUInteger regionWidth = (*regions)[0].size.width;
+    NSUInteger regionHeight = (*regions)[0].size.height;
+    NSUInteger regionArea = regionWidth * regionHeight;
+    
+    float4 *data = new float4[regionArea*area.size()];
+    int pos = 0;
+    for(std::vector<float4*>::iterator it = area.begin(); it != area.end(); ++it)
+    {
+        memcpy(&data[pos], *it, regionArea*sizeof(float4));
+        pos+=regionArea;
+        delete *it;
+    }
+    //since all are the same, just grab first one for iteration count
+    float temp = data[0].z;
+    id<MTLBuffer> itBuffer = [_device newBufferWithBytes:&temp length:sizeof(float4) options:0];
+    id<MTLBuffer> buffer = [_device newBufferWithBytes:data length:area.size()*sizeof(float4)*regionArea options:0];
+    id<MTLCommandBuffer> commandBuffer = [_queue commandBuffer];
+    id<MTLComputeCommandEncoder> compute = [commandBuffer computeCommandEncoder];
+    [compute setComputePipelineState:_kernelFill];
+    
+    [compute setBuffer:buffer offset:0 atIndex:0];
+    [compute setBuffer:itBuffer offset:0 atIndex:1];
     MTLSize threadsPerGroup = {1, 1, 1};
     MTLSize numThreadGroups = {area.size()*regionArea, 1, 1};
     [compute dispatchThreadgroups:numThreadGroups threadsPerThreadgroup:threadsPerGroup];
@@ -379,28 +433,44 @@
             
             [root.nw subdivideTexture:_highResolutionOutput currentDepth:4 levelRegions:area regionInfo:regions mandelbrot:self];
             [self performIterationsOnArea:area[0] describedByRegions:&regions[0]];
+            for(int i = 1; i < 4; i++)
+            {
+                [self fillArea:area[i] describedByRegions:&regions[i]];
+            }
         });
-        dispatch_async(neQ, ^{
-            std::vector<float4*> area[4];
-            std::vector<MTLRegion> *regions = new std::vector<MTLRegion>[4];
-            
-            [root.ne subdivideTexture:_highResolutionOutput currentDepth:4 levelRegions:area regionInfo:regions mandelbrot:self];
-            [self performIterationsOnArea:area[0] describedByRegions:&regions[0]];
-        });
-        dispatch_async(swQ, ^{
-            std::vector<float4*> area[4];
-            std::vector<MTLRegion> *regions = new std::vector<MTLRegion>[4];
-            
-            [root.sw subdivideTexture:_highResolutionOutput currentDepth:4 levelRegions:area regionInfo:regions mandelbrot:self];
-            [self performIterationsOnArea:area[0] describedByRegions:&regions[0]];
-        });
-        dispatch_async(seQ, ^{
-            std::vector<float4*> area[4];
-            std::vector<MTLRegion> *regions = new std::vector<MTLRegion>[4];
-            
-            [root.se subdivideTexture:_highResolutionOutput currentDepth:4 levelRegions:area regionInfo:regions mandelbrot:self];
-            [self performIterationsOnArea:area[0] describedByRegions:&regions[0]];
-        });
+//        dispatch_async(neQ, ^{
+//            std::vector<float4*> area[4];
+//            std::vector<MTLRegion> *regions = new std::vector<MTLRegion>[4];
+//            
+//            [root.ne subdivideTexture:_highResolutionOutput currentDepth:4 levelRegions:area regionInfo:regions mandelbrot:self];
+//            [self performIterationsOnArea:area[0] describedByRegions:&regions[0]];
+//            for(int i = 1; i < 4; i++)
+//            {
+//                [self fillArea:area[i] describedByRegions:&regions[i]];
+//            }
+//        });
+//        dispatch_async(swQ, ^{
+//            std::vector<float4*> area[4];
+//            std::vector<MTLRegion> *regions = new std::vector<MTLRegion>[4];
+//            
+//            [root.sw subdivideTexture:_highResolutionOutput currentDepth:4 levelRegions:area regionInfo:regions mandelbrot:self];
+//            [self performIterationsOnArea:area[0] describedByRegions:&regions[0]];
+//            for(int i = 1; i < 4; i++)
+//            {
+//                [self fillArea:area[i] describedByRegions:&regions[i]];
+//            }
+//        });
+//        dispatch_async(seQ, ^{
+//            std::vector<float4*> area[4];
+//            std::vector<MTLRegion> *regions = new std::vector<MTLRegion>[4];
+//            
+//            [root.se subdivideTexture:_highResolutionOutput currentDepth:4 levelRegions:area regionInfo:regions mandelbrot:self];
+//            [self performIterationsOnArea:area[0] describedByRegions:&regions[0]];
+//            for(int i = 1; i < 4; i++)
+//            {
+//                [self fillArea:area[i] describedByRegions:&regions[i]];
+//            }
+//        });
     }
    // _highResReady = YES;
 }

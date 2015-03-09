@@ -199,12 +199,19 @@ fragment float4 passFinal(VertexInOut inFrag [[stage_in]],
     uint4 p = uint4(pos);
     float4 input = previous.sample(quad_sampler, inFrag._texCoord);
 
-//    if(input.z < 255)
-//        color.r = input.z/255.0;
+    if(input.z < 255.0)
+        color.g = input.z/255.0;
     color.r = input.w;
-    color.g = input.z;
+//    color.g = input.z;
     //color.b = input.y;
     return color;
+}
+
+kernel void mandelFillKernel(device float4 *regions [[buffer(0)]],
+                             constant float *iterations [[buffer(1)]],
+                             uint gid [[thread_position_in_grid]])
+{
+    regions[gid].z = *iterations;
 }
 
 kernel void mandelIterationKernel(//texture2d<float, access::read> inTexture [[texture(0)]],
@@ -213,27 +220,22 @@ kernel void mandelIterationKernel(//texture2d<float, access::read> inTexture [[t
                                   device float4 *regions [[buffer(0)]],
                                   uint gid [[thread_position_in_grid]])
 {
-    regions[gid].z = 1.0;
-   // pixel = pixels[(tptg.y*2) * (tpg.x) + (tptg.x*2)];
-    //pixel.x = (float)tptg.x*2 / (float)tpg.x*2;
-    //pixel.y = (float)tptg.y*2 / (float)tpg.y*2;
-   // pixel.x = 0.0;
-//    float4 input = inTexture.read(gid);
-//    float2 z = input.xy;
-//    float2 c = input.xy;
-//    uint32_t i = 0;
-//    for(i = 0; i <= 256; i++)
-//    {
-//        if(dot(z, z) > 4.0) //leave unchanged, but copy through
-//        {
-//            break;
-//        }
-//        else
-//        {
-//            z = float2(z.x * z.x - z.y*z.y, 2.0*z.x*z.y) + c;
-//        }
-//    }
-//    outTexture.write(i, gid);
+    float2 z = regions[gid].xy;
+    float2 c = regions[gid].xy;
+    uint32_t i = 0;
+    for(i = 0; i < 256; i++)
+    {
+        if(dot(z, z) > 4.0) //leave unchanged, but copy through
+        {
+            regions[gid].z = (float)i;
+            break;
+        }
+        else
+        {
+            z = float2(z.x * z.x - z.y*z.y, 2.0*z.x*z.y) + c;
+            regions[gid].z = (float)i;
+        }
+    }
 }
 
 kernel void test(texture2d<float, access::write> outTexture [[texture(0)]],

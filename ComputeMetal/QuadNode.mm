@@ -71,6 +71,7 @@ using namespace simd;
     MTLSize height;
 
     MTLRegion square = MTLRegionMake2D(_mandelNode.x, _mandelNode.y, _mandelNode.size.x, _mandelNode.size.y);
+    NSString *sq = [NSString stringWithFormat:@"region X:%lu Y:%lu, Size:%lu*%lu", (unsigned long)square.origin.x, (unsigned long)square.origin.y, (unsigned long)square.size.width, (unsigned long)square.size.height];
 
     width = MTLSizeMake(_mandelNode.size.x, 1, 1);
     height = MTLSizeMake(1, _mandelNode.size.y, 1);
@@ -99,9 +100,13 @@ using namespace simd;
     float2 bottomZ;
     float2 leftZ;
     float2 rightZ;
+    
+    int currentBorderIndex = 0;
+    int lastIteration = 0;
 
     for(int i = 0; i < _mandelNode.size.x; i++) //square, so either x or y
     {
+        currentBorderIndex = i;
         topZ = _top[i].xy;
         bottomZ = _bottom[i].xy;
         leftZ = _left[i].xy;
@@ -110,6 +115,7 @@ using namespace simd;
         BOOL topDone = NO, bottomDone = NO, leftDone = NO, rightDone = NO;
         for(int it = 0; it < 256; it++)
         {
+            lastIteration = it;
             if(!topDone)
             {
                 if(dot(topZ, topZ) > 4.0)
@@ -178,6 +184,7 @@ using namespace simd;
 
     if(!same && depth > 0)
     {
+        NSLog(@"%@ will be subdivided, last border index %d", sq, currentBorderIndex);
         uint x = self.mandelNode.x;
         uint y = self.mandelNode.y;
         uint2 size = self.mandelNode.size / 2;
@@ -194,6 +201,10 @@ using namespace simd;
     }
     else
     {
+        if(same)
+        {
+            NSLog(@"%@ has same borders with last iteration %d", sq, lastIteration);
+        }
         for(int i = 0; i < _mandelNode.size.x; i++)
         {
             _top[i].w = 1.0;
