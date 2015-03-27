@@ -17,6 +17,7 @@
 		2F4032711A683BF800DBB511 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2F4032701A683BF800DBB511 /* Metal.framework */; };
 		2F4032741A683FC900DBB511 /* MetalView.m in Sources */ = {isa = PBXBuildFile; fileRef = 2F4032731A683FC900DBB511 /* MetalView.m */; };
 		2F4032771A6C8C4300DBB511 /* Quad.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2F4032761A6C8C4300DBB511 /* Quad.mm */; };
+		9913E6921AC5F9410017B6AE /* CalculateQuadrant.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9913E6911AC5F9410017B6AE /* CalculateQuadrant.mm */; };
 		994202D31A686EC6003D80F5 /* Renderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 994202D21A686EC6003D80F5 /* Renderer.mm */; };
 		994202D81A6EBC5F003D80F5 /* Transforms.mm in Sources */ = {isa = PBXBuildFile; fileRef = 994202D71A6EBC5F003D80F5 /* Transforms.mm */; };
 		994202DB1A6EFCA0003D80F5 /* processTexturedQuad.metal in Sources */ = {isa = PBXBuildFile; fileRef = 994202DA1A6EFCA0003D80F5 /* processTexturedQuad.metal */; };
@@ -44,6 +45,8 @@
 		2F4032731A683FC900DBB511 /* MetalView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MetalView.m; sourceTree = "<group>"; };
 		2F4032751A6C8C4300DBB511 /* Quad.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Quad.h; sourceTree = "<group>"; };
 		2F4032761A6C8C4300DBB511 /* Quad.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = Quad.mm; sourceTree = "<group>"; };
+		9913E6901AC5F9410017B6AE /* CalculateQuadrant.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CalculateQuadrant.h; sourceTree = "<group>"; };
+		9913E6911AC5F9410017B6AE /* CalculateQuadrant.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = CalculateQuadrant.mm; sourceTree = "<group>"; };
 		994202D11A686EC6003D80F5 /* Renderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Renderer.h; sourceTree = "<group>"; };
 		994202D21A686EC6003D80F5 /* Renderer.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = Renderer.mm; sourceTree = "<group>"; };
 		994202D71A6EBC5F003D80F5 /* Transforms.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = Transforms.mm; path = ../Transforms.mm; sourceTree = "<group>"; };
@@ -114,6 +117,8 @@
 				99D261D01A77073D00D8D5AA /* Common.h */,
 				99B945971AA4CA7900025B68 /* QuadNode.h */,
 				99B945981AA4CA7900025B68 /* QuadNode.mm */,
+				9913E6901AC5F9410017B6AE /* CalculateQuadrant.h */,
+				9913E6911AC5F9410017B6AE /* CalculateQuadrant.mm */,
 				99D261D11A7AC5DF00D8D5AA /* Mandelbrot.h */,
 				99D1182E1A7B01B400983CB4 /* Utilities.h */,
 				99D261D21A7AC5DF00D8D5AA /* Mandelbrot.mm */,
@@ -218,6 +223,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9913E6921AC5F9410017B6AE /* CalculateQuadrant.mm in Sources */,
 				2F4032771A6C8C4300DBB511 /* Quad.mm in Sources */,
 				99B945991AA4CA7900025B68 /* QuadNode.mm in Sources */,
 				99D261D31A7AC5DF00D8D5AA /* Mandelbrot.mm in Sources */,

@@ -184,7 +184,7 @@ using namespace simd;
 
     if(!same && depth > 0)
     {
-        NSLog(@"%@ will be subdivided, last border index %d", sq, currentBorderIndex);
+//        NSLog(@"%@ will be subdivided, last border index %d", sq, currentBorderIndex);
         uint x = self.mandelNode.x;
         uint y = self.mandelNode.y;
         uint2 size = self.mandelNode.size / 2;
@@ -201,10 +201,10 @@ using namespace simd;
     }
     else
     {
-        if(same)
-        {
-            NSLog(@"%@ has same borders with last iteration %d", sq, lastIteration);
-        }
+//        if(same)
+//        {
+//            NSLog(@"%@ has same borders with last iteration %d", sq, lastIteration);
+//        }
         for(int i = 0; i < _mandelNode.size.x; i++)
         {
             _top[i].w = 1.0;

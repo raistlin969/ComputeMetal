@@ -438,39 +438,39 @@
                 [self fillArea:area[i] describedByRegions:&regions[i]];
             }
         });
-//        dispatch_async(neQ, ^{
-//            std::vector<float4*> area[4];
-//            std::vector<MTLRegion> *regions = new std::vector<MTLRegion>[4];
-//            
-//            [root.ne subdivideTexture:_highResolutionOutput currentDepth:4 levelRegions:area regionInfo:regions mandelbrot:self];
-//            [self performIterationsOnArea:area[0] describedByRegions:&regions[0]];
-//            for(int i = 1; i < 4; i++)
-//            {
-//                [self fillArea:area[i] describedByRegions:&regions[i]];
-//            }
-//        });
-//        dispatch_async(swQ, ^{
-//            std::vector<float4*> area[4];
-//            std::vector<MTLRegion> *regions = new std::vector<MTLRegion>[4];
-//            
-//            [root.sw subdivideTexture:_highResolutionOutput currentDepth:4 levelRegions:area regionInfo:regions mandelbrot:self];
-//            [self performIterationsOnArea:area[0] describedByRegions:&regions[0]];
-//            for(int i = 1; i < 4; i++)
-//            {
-//                [self fillArea:area[i] describedByRegions:&regions[i]];
-//            }
-//        });
-//        dispatch_async(seQ, ^{
-//            std::vector<float4*> area[4];
-//            std::vector<MTLRegion> *regions = new std::vector<MTLRegion>[4];
-//            
-//            [root.se subdivideTexture:_highResolutionOutput currentDepth:4 levelRegions:area regionInfo:regions mandelbrot:self];
-//            [self performIterationsOnArea:area[0] describedByRegions:&regions[0]];
-//            for(int i = 1; i < 4; i++)
-//            {
-//                [self fillArea:area[i] describedByRegions:&regions[i]];
-//            }
-//        });
+        dispatch_async(neQ, ^{
+            std::vector<float4*> area[4];
+            std::vector<MTLRegion> *regions = new std::vector<MTLRegion>[4];
+            
+            [root.ne subdivideTexture:_highResolutionOutput currentDepth:4 levelRegions:area regionInfo:regions mandelbrot:self];
+            [self performIterationsOnArea:area[0] describedByRegions:&regions[0]];
+            for(int i = 1; i < 4; i++)
+            {
+                [self fillArea:area[i] describedByRegions:&regions[i]];
+            }
+        });
+        dispatch_async(swQ, ^{
+            std::vector<float4*> area[4];
+            std::vector<MTLRegion> *regions = new std::vector<MTLRegion>[4];
+            
+            [root.sw subdivideTexture:_highResolutionOutput currentDepth:4 levelRegions:area regionInfo:regions mandelbrot:self];
+            [self performIterationsOnArea:area[0] describedByRegions:&regions[0]];
+            for(int i = 1; i < 4; i++)
+            {
+                [self fillArea:area[i] describedByRegions:&regions[i]];
+            }
+        });
+        dispatch_async(seQ, ^{
+            std::vector<float4*> area[4];
+            std::vector<MTLRegion> *regions = new std::vector<MTLRegion>[4];
+            
+            [root.se subdivideTexture:_highResolutionOutput currentDepth:4 levelRegions:area regionInfo:regions mandelbrot:self];
+            [self performIterationsOnArea:area[0] describedByRegions:&regions[0]];
+            for(int i = 1; i < 4; i++)
+            {
+                [self fillArea:area[i] describedByRegions:&regions[i]];
+            }
+        });
     }
    // _highResReady = YES;
 }
