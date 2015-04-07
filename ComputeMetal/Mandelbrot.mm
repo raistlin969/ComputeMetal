@@ -10,7 +10,7 @@
 #import "Quad.h"
 #import "Utilities.h"
 #import "QuadNode.h"
-
+#import "CalculateQuadrant.h"
 #import <simd/simd.h>
 #include <vector>
 
@@ -67,6 +67,8 @@
     id<MTLBuffer> _nodes;
 
     BOOL _nwDone, _neDone, _swDone, _seDone;
+
+    __strong NSOperationQueue *_calcQueue;
 }
 
 - (instancetype)initWithDevice:(id<MTLDevice>)device Library:(id<MTLLibrary>)library
@@ -89,6 +91,9 @@
         _iteration = 0;
         _queue = [_device newCommandQueue];
         _nwDone = _neDone = _swDone = _seDone = NO;
+
+        _calcQueue = [[NSOperationQueue alloc] init];
+        _calcQueue.name = @"Calc Queue";
     }
     return self;
 }
@@ -235,6 +240,7 @@
 {
     if(!_changed)
         return;
+    [_calcQueue cancelAllOperations];
     _highResReady = NO;
     id<MTLCommandBuffer> commandBuffer = [_queue commandBuffer];
     id<MTLRenderCommandEncoder> genC = [commandBuffer renderCommandEncoderWithDescriptor:_generateHighResZPass];
@@ -409,69 +415,84 @@
 
 -(void)someFunc
 {
-    QuadNode *root = [[QuadNode alloc] initWithSize:{1024, 1024} atX:0 Y:0];
+    MTLRegion nw = MTLRegionMake2D(0, 0, 512, 512);
+    MTLRegion ne = MTLRegionMake2D(512, 0, 512, 512);
+    MTLRegion sw = MTLRegionMake2D(0, 512, 512, 512);
+    MTLRegion se = MTLRegionMake2D(512, 512, 512, 512);
 
-    uint x = root.mandelNode.x;
-    uint y = root.mandelNode.y;
-    uint2 size = root.mandelNode.size / 2;
+    CalculateQuadrant *calcNW = [[CalculateQuadrant alloc] initWithTexture:_highResolutionOutput Region:nw Mandelbrot:self];
+    CalculateQuadrant *calcNE = [[CalculateQuadrant alloc] initWithTexture:_highResolutionOutput Region:ne Mandelbrot:self];
+    CalculateQuadrant *calcSW = [[CalculateQuadrant alloc] initWithTexture:_highResolutionOutput Region:sw Mandelbrot:self];
+    CalculateQuadrant *calcSE = [[CalculateQuadrant alloc] initWithTexture:_highResolutionOutput Region:se Mandelbrot:self];
 
-    root.nw = [[QuadNode alloc] initWithSize:size atX:x Y:y];
-    root.ne = [[QuadNode alloc] initWithSize:size atX:x + size.x Y:y];
-    root.sw = [[QuadNode alloc] initWithSize:size atX:x Y:y + size.y];
-    root.se = [[QuadNode alloc] initWithSize:size atX:x + size.x Y:y + size.y];
+    [_calcQueue addOperation:calcNW];
+    [_calcQueue addOperation:calcNE];
+    [_calcQueue addOperation:calcSW];
+    [_calcQueue addOperation:calcSE];
 
-    @autoreleasepool
-    {
-        dispatch_queue_t nwQ = dispatch_queue_create("nw" , NULL);
-        dispatch_queue_t neQ = dispatch_queue_create("ne" , NULL);
-        dispatch_queue_t swQ = dispatch_queue_create("sw" , NULL);
-        dispatch_queue_t seQ = dispatch_queue_create("se" , NULL);
-
-        dispatch_async(nwQ, ^{
-            std::vector<float4*> area[4];
-            std::vector<MTLRegion> *regions = new std::vector<MTLRegion>[4];
-            
-            [root.nw subdivideTexture:_highResolutionOutput currentDepth:4 levelRegions:area regionInfo:regions mandelbrot:self];
-            [self performIterationsOnArea:area[0] describedByRegions:&regions[0]];
-            for(int i = 1; i < 4; i++)
-            {
-                [self fillArea:area[i] describedByRegions:&regions[i]];
-            }
-        });
-        dispatch_async(neQ, ^{
-            std::vector<float4*> area[4];
-            std::vector<MTLRegion> *regions = new std::vector<MTLRegion>[4];
-            
-            [root.ne subdivideTexture:_highResolutionOutput currentDepth:4 levelRegions:area regionInfo:regions mandelbrot:self];
-            [self performIterationsOnArea:area[0] describedByRegions:&regions[0]];
-            for(int i = 1; i < 4; i++)
-            {
-                [self fillArea:area[i] describedByRegions:&regions[i]];
-            }
-        });
-        dispatch_async(swQ, ^{
-            std::vector<float4*> area[4];
-            std::vector<MTLRegion> *regions = new std::vector<MTLRegion>[4];
-            
-            [root.sw subdivideTexture:_highResolutionOutput currentDepth:4 levelRegions:area regionInfo:regions mandelbrot:self];
-            [self performIterationsOnArea:area[0] describedByRegions:&regions[0]];
-            for(int i = 1; i < 4; i++)
-            {
-                [self fillArea:area[i] describedByRegions:&regions[i]];
-            }
-        });
-        dispatch_async(seQ, ^{
-            std::vector<float4*> area[4];
-            std::vector<MTLRegion> *regions = new std::vector<MTLRegion>[4];
-            
-            [root.se subdivideTexture:_highResolutionOutput currentDepth:4 levelRegions:area regionInfo:regions mandelbrot:self];
-            [self performIterationsOnArea:area[0] describedByRegions:&regions[0]];
-            for(int i = 1; i < 4; i++)
-            {
-                [self fillArea:area[i] describedByRegions:&regions[i]];
-            }
-        });
-    }
+//    QuadNode *root = [[QuadNode alloc] initWithSize:{1024, 1024} atX:0 Y:0];
+//
+//    uint x = root.mandelNode.x;
+//    uint y = root.mandelNode.y;
+//    uint2 size = root.mandelNode.size / 2;
+//
+//    root.nw = [[QuadNode alloc] initWithSize:size atX:x Y:y];
+//    root.ne = [[QuadNode alloc] initWithSize:size atX:x + size.x Y:y];
+//    root.sw = [[QuadNode alloc] initWithSize:size atX:x Y:y + size.y];
+//    root.se = [[QuadNode alloc] initWithSize:size atX:x + size.x Y:y + size.y];
+//
+//    @autoreleasepool
+//    {
+//        dispatch_queue_t nwQ = dispatch_queue_create("nw" , NULL);
+//        dispatch_queue_t neQ = dispatch_queue_create("ne" , NULL);
+//        dispatch_queue_t swQ = dispatch_queue_create("sw" , NULL);
+//        dispatch_queue_t seQ = dispatch_queue_create("se" , NULL);
+//
+//        dispatch_async(nwQ, ^{
+//            std::vector<float4*> area[4];
+//            std::vector<MTLRegion> *regions = new std::vector<MTLRegion>[4];
+//            
+//            [root.nw subdivideTexture:_highResolutionOutput currentDepth:4 levelRegions:area regionInfo:regions mandelbrot:self];
+//            [self performIterationsOnArea:area[0] describedByRegions:&regions[0]];
+//            for(int i = 1; i < 4; i++)
+//            {
+//                [self fillArea:area[i] describedByRegions:&regions[i]];
+//            }
+//        });
+//        dispatch_async(neQ, ^{
+//            std::vector<float4*> area[4];
+//            std::vector<MTLRegion> *regions = new std::vector<MTLRegion>[4];
+//            
+//            [root.ne subdivideTexture:_highResolutionOutput currentDepth:4 levelRegions:area regionInfo:regions mandelbrot:self];
+//            [self performIterationsOnArea:area[0] describedByRegions:&regions[0]];
+//            for(int i = 1; i < 4; i++)
+//            {
+//                [self fillArea:area[i] describedByRegions:&regions[i]];
+//            }
+//        });
+//        dispatch_async(swQ, ^{
+//            std::vector<float4*> area[4];
+//            std::vector<MTLRegion> *regions = new std::vector<MTLRegion>[4];
+//            
+//            [root.sw subdivideTexture:_highResolutionOutput currentDepth:4 levelRegions:area regionInfo:regions mandelbrot:self];
+//            [self performIterationsOnArea:area[0] describedByRegions:&regions[0]];
+//            for(int i = 1; i < 4; i++)
+//            {
+//                [self fillArea:area[i] describedByRegions:&regions[i]];
+//            }
+//        });
+//        dispatch_async(seQ, ^{
+//            std::vector<float4*> area[4];
+//            std::vector<MTLRegion> *regions = new std::vector<MTLRegion>[4];
+//            
+//            [root.se subdivideTexture:_highResolutionOutput currentDepth:4 levelRegions:area regionInfo:regions mandelbrot:self];
+//            [self performIterationsOnArea:area[0] describedByRegions:&regions[0]];
+//            for(int i = 1; i < 4; i++)
+//            {
+//                [self fillArea:area[i] describedByRegions:&regions[i]];
+//            }
+//        });
+//    }
    // _highResReady = YES;
 }
 

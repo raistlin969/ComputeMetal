@@ -10,6 +10,7 @@
 #import <Metal/Metal.h>
 #import "Common.h"
 #import "MetalView.h"
+#include <vector>
 
 @interface Mandelbrot : NSObject
 
@@ -23,4 +24,6 @@
 - (void)panX:(float)x Y:(float)y;
 - (void)zoom:(float)zoom;
 -(void)performIterationsOnArea:(float4*)area describedByRegion:(MTLRegion)region;
+-(void)performIterationsOnArea:(std::vector<float4*>&)area describedByRegions:(std::vector<MTLRegion>*)regions;
+-(void)fillArea:(std::vector<float4*>&)area describedByRegions:(std::vector<MTLRegion>*)regions;
 @end

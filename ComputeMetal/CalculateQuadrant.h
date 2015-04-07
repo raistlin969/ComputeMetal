@@ -10,8 +10,11 @@
 
 #import <Metal/Metal.h>
 
+@class Mandelbrot;
+
 @interface CalculateQuadrant : NSOperation
 
--(instancetype)initWithTexture:(id<MTLTexture>)texture Region:(MTLRegion)region;
+//-(instancetype)initWithTexture:(id<MTLTexture>)texture Region:(MTLRegion)region;
+-(id)initWithTexture:(id<MTLTexture>)texture Region:(MTLRegion)region Mandelbrot:(Mandelbrot*)man;
 
 @end
